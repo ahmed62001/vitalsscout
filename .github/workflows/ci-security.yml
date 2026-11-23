@@ -31,5 +31,8 @@ jobs:
       - name: Run USDT (BEP20) payment verifier tests
         run: node ./test/usdt-verifier.test.mjs
 
+      - name: Run automated USDT payment verification engine tests
+        run: node ./test/payment-system.test.mjs
+
       - name: Run security regression & USDT-only policy suite
         run: node ./test/security.test.mjs

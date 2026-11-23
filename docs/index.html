@@ -281,7 +281,8 @@
                   <li><strong>Payment Asset:</strong> USDT (Tether USD &mdash; BEP20)</li>
                   <li><strong>Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
                   <li><strong>Network Display Name:</strong> BSC</li>
-                  <li><strong>Exact One-Time Net Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong> (if withdrawing from an exchange, ensure net received &ge; due amount after sender fees)</li>
+                  <li><strong>Order ID &amp; Payment Reference:</strong> <code id="order-id-preview">VS-PREVIEW</code> &bull; <code id="payment-ref-preview">VS-PAY-PREVIEW</code> (attached to your brief)</li>
+                  <li><strong>Exact One-Time Net Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong> (if withdrawing from an exchange, ensure net received &ge; due amount after sender fees; concurrent backend orders may apply up to &minus;0.0099 USDT micro-discount for exact matching)</li>
                   <li><strong>Official USDT (BEP20) Contract on BSC:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener noreferrer"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
                   <li>
                     <strong>Binance BSC Deposit Address:</strong><br />
@@ -301,7 +302,7 @@
                   <button type="button" class="btn btn-primary" id="verify-usdt-btn">Verify Payment on BNB Smart Chain</button>
                 </div>
                 <div id="usdt-verify-status" class="verify-box is-pending" aria-live="polite">
-                  <strong>Payment State: Pending &mdash;</strong> Waiting for on-chain verification. Independent BSC RPC quorum checks Chain ID 56 (&ge; 5 confirmations on official USDT contract) and your exact TxID is matched in Binance Deposit History before fulfillment begins (payment states: <em>Pending</em>, <em>Confirmed</em>, <em>Failed</em>, or <em>Expired</em>). Always attach your TxID; screenshots alone are never accepted.
+                  <strong>Payment State: Awaiting Payment &mdash;</strong> Waiting for on-chain verification. Independent BSC RPC quorum checks Chain ID 56 on the official USDT contract (<code>0x55d398326f99059fF775485246999027B3197955</code>) and your exact TxID is cross-checked against read-only Binance Deposit History before transitioning to <em>Paid</em> (backend order states: <em>Awaiting Payment</em>, <em>Payment Detected</em>, <em>Confirming</em>, <em>Paid</em>, <em>Underpaid</em>, <em>Overpaid</em>, <em>Expired</em>, <em>Failed</em>, or <em>Manual Review</em>). Always attach your Order ID and TxID; screenshots alone are never accepted.
                 </div>
               </div>
             </div>
@@ -336,7 +337,7 @@
             </details>
             <details>
               <summary>What payment method is accepted and how is it verified?</summary>
-              <p><strong>USDT</strong> sent via <strong>BSC &mdash; BNB Smart Chain (BEP20, Chain ID 56)</strong> to Binance deposit address <code>0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2</code> is the <strong>only</strong> payment method accepted. Every transaction hash is independently verified against the official USDT BEP20 contract (<code>0x55d398326f99059fF775485246999027B3197955</code>), destination address, exact net amount received, 24-hour checkout window, and &ge; 5 confirmations across independent BSC RPC nodes, then matched by exact TxID in Binance Deposit History. Duplicate transaction claims are rejected, and if automated RPCs are temporarily unreachable, the order remains <em>Pending</em> until manually verified.</p>
+              <p><strong>USDT</strong> sent via <strong>BSC &mdash; BNB Smart Chain (BEP20, Chain ID 56)</strong> to Binance deposit address <code>0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2</code> is the <strong>only</strong> payment method accepted. Every transaction hash is independently verified against the official USDT BEP20 contract (<code>0x55d398326f99059fF775485246999027B3197955</code>), destination address, exact net amount received, checkout expiration window, and &ge; 15 backend confirmations (&ge; 5 confirmations on quick client check) across independent BSC RPC nodes, then matched by exact TxID in operator read-only Binance Deposit History before transitioning to <em>Paid</em>. Duplicate transaction claims are rejected, and if automated Binance API verification is not enabled yet or unreachable, verified deposits route safely to <em>Manual Review</em> rather than guessing.</p>
             </details>
           </div>
           <div>

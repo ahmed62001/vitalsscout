@@ -9,8 +9,10 @@
   "scripts": {
     "audit": "node ./cli/vitalsscout.mjs",
     "verify-usdt": "node ./cli/verify-usdt-payment.mjs",
+    "start:payment-api": "node ./server/api-server.mjs",
     "test:security": "node ./test/security.test.mjs",
-    "test": "node ./test/usdt-verifier.test.mjs && node ./test/security.test.mjs && node ./test/vitalsscout.test.mjs",
+    "test:payments": "node ./test/payment-system.test.mjs",
+    "test": "node ./test/usdt-verifier.test.mjs && node ./test/payment-system.test.mjs && node ./test/security.test.mjs && node ./test/vitalsscout.test.mjs",
     "build-samples": "node ./scripts/build-samples.mjs"
   },
   "keywords": [

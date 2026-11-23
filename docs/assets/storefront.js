@@ -44,6 +44,28 @@ const copyWalletStatus = document.getElementById('copy-wallet-status');
 const txHashInput = document.getElementById('usdt-tx-hash');
 const verifyUsdtBtn = document.getElementById('verify-usdt-btn');
 const verifyStatusEl = document.getElementById('usdt-verify-status');
+const orderIdPreviewEl = document.getElementById('order-id-preview');
+const paymentRefPreviewEl = document.getElementById('payment-ref-preview');
+
+function createRandomHexUpper(byteCount) {
+  const bytes = new Uint8Array(byteCount);
+  if (window.crypto && window.crypto.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < byteCount; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+const nowDate = new Date();
+const dateStamp = `${nowDate.getUTCFullYear()}${String(nowDate.getUTCMonth() + 1).padStart(2, '0')}${String(nowDate.getUTCDate()).padStart(2, '0')}`;
+const sessionOrderId = `VS-${dateStamp}-${createRandomHexUpper(3)}`;
+const sessionPaymentRef = `VS-PAY-${createRandomHexUpper(4)}`;
+
+if (orderIdPreviewEl) orderIdPreviewEl.textContent = sessionOrderId;
+if (paymentRefPreviewEl) paymentRefPreviewEl.textContent = sessionPaymentRef;
 
 let copyResetTimer = null;
 let walletResetTimer = null;
@@ -138,6 +160,9 @@ function updateBrief() {
 
   const lines = [
     '## VitalsScout Audit Request',
+    ...(tier.usdt
+      ? [`- Order ID: ${sessionOrderId}`, `- Payment Reference: ${sessionPaymentRef}`]
+      : []),
     `- Website URL: ${url}`,
     `- Platform: ${platform}`,
     `- Service: ${tier.label} (${tier.price})`,

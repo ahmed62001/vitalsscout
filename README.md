@@ -48,6 +48,9 @@ npm test
 
 # Independently verify a one-time USDT (BEP20) payment on BNB Smart Chain
 npm run verify-usdt -- <txHash> --service audit-fix --record verified-txs.json --order-id ORDER-001
+
+# Run backend dual-source automated payment verification API (Binance API disabled fail-closed unless env secrets configured)
+npm run start:payment-api
 ```
 
 ---

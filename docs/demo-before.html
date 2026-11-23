@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Roast & Craft Coffee — Demo Storefront (Before Optimization)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; color: #334155; background: #ffffff; }
+    .demo-banner { background: #fef3c7; color: #78350f; padding: 10px 16px; font-size: 13px; text-align: center; border-bottom: 1px solid #f59e0b; }
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; }
+    .brand { font-size: 20px; font-weight: bold; color: #0f172a; }
+    .tiny-nav a { display: inline-block; font-size: 11px; padding: 2px 4px; color: #94a3b8; text-decoration: none; margin-left: 8px; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: start; }
+    .product-img { width: 100%; border-radius: 10px; display: block; }
+    .price { font-size: 22px; font-weight: bold; color: #0f172a; margin: 8px 0; }
+    .low-contrast-note { color: #9ca3af; background: #ffffff; font-size: 14px; margin-bottom: 14px; }
+    .buy-btn { background: #6ee7b7; color: #ffffff; border: none; padding: 12px 22px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+    .newsletter { margin-top: 32px; padding: 20px; background: #f8fafc; border-radius: 8px; }
+    .newsletter input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; width: 220px; }
+    .tiny-close { display: inline-block; width: 16px; height: 16px; line-height: 16px; font-size: 11px; background: #cbd5e1; color: #ffffff; text-align: center; text-decoration: none; }
+    .late-promo { background: #0f172a; color: #ffffff; padding: 14px; text-align: center; font-size: 14px; }
+  </style>
+  <script>
+    // Intentional demo pattern: synchronous late DOM insertion after first paint causing real layout shift (CLS)
+    window.addEventListener('load', function () {
+      var start = Date.now();
+      while (Date.now() - start < 350) {} // simulated blocking main-thread script
+      setTimeout(function () {
+        var slot = document.getElementById('promo-slot');
+        if (slot) {
+          var div = document.createElement('div');
+          div.className = 'late-promo';
+          div.style.padding = '36px 16px';
+          div.textContent = 'Free shipping on orders over $45 (injected late without reserved height — causes visible CLS shift)';
+          slot.appendChild(div);
+        }
+      }, 600);
+    });
+  </script>
+</head>
+<body>
+  <div class="demo-banner">
+    Fictional Demo Storefront (<strong>BEFORE</strong> VitalsScout Remediation) — Intentionally unoptimized sample for side-by-side comparison. <a href="./index.html">Back to VitalsScout</a>
+  </div>
+  <div id="promo-slot"></div>
+
+  <div class="nav">
+    <div class="brand">Roast &amp; Craft Coffee</div>
+    <div class="tiny-nav">
+      <a href="#details">Shop</a>
+      <a href="#details">Roasts</a>
+      <a href="#newsletter" class="tiny-close">?</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="product-grid">
+      <div>
+        <img class="product-img" src="./assets/roast-bag.svg" />
+      </div>
+      <div id="details">
+        <h3>Single-Origin Reserve</h3>
+        <div style="font-size:28px;font-weight:bold;color:#0f172a;">Ethiopia Yirgacheffe — Whole Bean</div>
+        <div class="price">$21.00 USD</div>
+        <p class="low-contrast-note">Washed heirloom lot roasted weekly in small batches. Bright floral notes of jasmine, bergamot, and dark cocoa.</p>
+        <button class="buy-btn" type="button">Add to Bag</button>
+        <p>Want brewing specs? <a href="./demo-after.html">click here</a> to see the remediated version.</p>
+      </div>
+    </div>
+
+    <div class="newsletter" id="newsletter">
+      <h4>Join weekly roast drops</h4>
+      <form action="#newsletter">
+        <input type="email" placeholder="Enter your email" />
+        <button type="submit">Join</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VitalsScout — Web Performance, Technical SEO &amp; WCAG 2.2 AA Audits</title>
+  <meta name="description" content="Fixed-price Core Web Vitals, Technical SEO, and WCAG 2.2 AA accessibility audits and hands-on code fixes for indie e-commerce stores and B2B SaaS." />
+  <link rel="canonical" href="https://ahmed62001.github.io/vitalsscout/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="VitalsScout — Speed, SEO & WCAG 2.2 AA Audits + Code Fixes" />
+  <meta property="og:description" content="Open-source diagnostic CLI + fixed-price 5-template audits ($149) and code remediation sprints ($349) for Shopify, WooCommerce, and B2B SaaS." />
+  <meta property="og:url" content="https://ahmed62001.github.io/vitalsscout/" />
+  <meta property="og:image" content="https://ahmed62001.github.io/vitalsscout/assets/og-card.jpg" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "VitalsScout Web Performance, Technical SEO & WCAG 2.2 AA Audit",
+    "provider": {
+      "@type": "Person",
+      "name": "Ahmed Mohamed"
+    },
+    "url": "https://ahmed62001.github.io/vitalsscout/",
+    "areaServed": "Worldwide",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Core Technical Audit (5 Templates)",
+        "price": "149",
+        "priceCurrency": "USD"
+      },
+      {
+        "@type": "Offer",
+        "name": "Audit + Code Fix Sprint",
+        "price": "349",
+        "priceCurrency": "USD"
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f8fafc;
+      --dark: #0b1220;
+      --dark-card: #131f35;
+      --ink: #0f172a;
+      --muted: #334155;
+      --border: #cbd5e1;
+      --emerald: #047857;
+      --emerald-hover: #065f46;
+      --emerald-soft: #ecfdf5;
+      --emerald-light: #34d399;
+      --warn-soft: #fef3c7;
+      --warn-ink: #92400e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 8px;
+      background: #ffffff;
+      color: var(--dark);
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      z-index: 100;
+    }
+    .skip-link:focus { left: 12px; outline: 3px solid var(--emerald); }
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+    header { background: var(--dark); color: #f8fafc; border-bottom: 1px solid #1e293b; }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 20px;
+      min-height: 44px;
+    }
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--emerald-light);
+      display: inline-block;
+    }
+    nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 12px;
+      color: #e2e8f0;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    nav a:hover, nav a:focus-visible {
+      background: #1e293b;
+      color: #ffffff;
+      outline: 2px solid var(--emerald-light);
+      outline-offset: 2px;
+    }
+    .hero {
+      background: var(--dark);
+      color: #f8fafc;
+      padding: 48px 0 64px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-block;
+      background: #064e3b;
+      color: #a7f3d0;
+      border: 1px solid #047857;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    .hero p { color: #cbd5e1; margin: 0 0 24px; font-size: 17px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .btn-primary { background: var(--emerald); color: #ffffff; }
+    .btn-primary:hover, .btn-primary:focus-visible { background: var(--emerald-hover); outline: 3px solid #a7f3d0; outline-offset: 2px; }
+    .btn-secondary-dark { background: #1e293b; color: #f8fafc; border-color: #475569; }
+    .btn-secondary-dark:hover, .btn-secondary-dark:focus-visible { background: #334155; outline: 3px solid var(--emerald-light); outline-offset: 2px; }
+    .btn-secondary-light { background: #ffffff; color: var(--ink); border-color: #64748b; }
+    .btn-secondary-light:hover, .btn-secondary-light:focus-visible { background: #f1f5f9; outline: 3px solid var(--emerald); outline-offset: 2px; }
+    .hero-card {
+      background: var(--dark-card);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .hero-img { width: 100%; height: auto; border-radius: 10px; display: block; }
+    .hero-caption { margin: 10px 0 0; font-size: 13px; color: #cbd5e1; }
+    section { padding: 56px 0; }
+    section.alt { background: var(--surface); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+    h2 { margin: 0 0 10px; font-size: 28px; line-height: 1.25; }
+    .section-lead { margin: 0 0 28px; color: var(--muted); max-width: 740px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card.featured { border: 2px solid var(--emerald); box-shadow: 0 6px 24px rgba(4, 120, 87, 0.08); }
+    .card h3 { margin: 0 0 8px; font-size: 20px; }
+    .price-tag { font-size: 32px; font-weight: 800; color: var(--ink); margin: 6px 0 4px; }
+    .sla { font-size: 14px; font-weight: 600; color: var(--emerald-hover); margin: 0 0 14px; }
+    ul.clean { padding-left: 18px; margin: 0 0 20px; color: var(--muted); }
+    ul.clean li { margin-bottom: 8px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .badge-good { background: var(--emerald-soft); color: var(--emerald-hover); }
+    .badge-warn { background: var(--warn-soft); color: var(--warn-ink); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: #ffffff; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f1f5f9; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    .demo-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+    form.builder {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    label.field-label, legend.field-label {
+      display: block;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+    input[type="url"], input[type="email"], select, textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--ink);
+      background: #ffffff;
+    }
+    fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; }
+    .checks { display: flex; flex-wrap: wrap; gap: 16px; }
+    .check-item { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 500; cursor: pointer; }
+    .check-item input { width: 20px; height: 20px; accent-color: var(--emerald); }
+    .estimate-box {
+      background: var(--emerald-soft);
+      border: 1px solid #6ee7b7;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      color: #064e3b;
+    }
+    pre.brief-preview {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0 0 14px;
+    }
+    .status-note { min-height: 24px; font-size: 14px; font-weight: 600; color: var(--emerald-hover); margin-top: 8px; }
+    details {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+    }
+    summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+    footer {
+      background: var(--dark);
+      color: #cbd5e1;
+      padding: 36px 0;
+      font-size: 14px;
+    }
+    footer a {
+      color: #6ee7b7;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      margin-right: 16px;
+    }
+    .disclaimer {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header>
+    <div class="container topbar">
+      <a class="brand" href="#main-content">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>VitalsScout</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <ul>
+          <li><a href="#demo">Live Demo</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#request">Request Audit</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="https://github.com/ahmed62001/vitalsscout">Open-Source CLI</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">For Shopify, WooCommerce &amp; B2B SaaS Teams</span>
+          <h1>Fix Mobile Speed, Technical SEO &amp; WCAG 2.2 AA Issues in One Fixed-Price Sprint</h1>
+          <p>
+            No $2,500+ agency retainers. No broken accessibility overlay widgets. VitalsScout combines a transparent open-source diagnostic CLI (Google Lighthouse + axe-core) with engineer-verified code remediation delivered via Git PR or theme patch.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#request">Request a Free 1-Page Snapshot</a>
+            <a class="btn btn-secondary-dark" href="#demo">Inspect Before / After Demo</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <img class="hero-img" src="./assets/hero-card.webp" alt="VitalsScout diagnostic overview graphic showing Performance, Accessibility, SEO, and Best Practices rings" width="800" height="450" fetchpriority="high" />
+          <p class="hero-caption">Backed by our MIT-licensed Node.js CLI — verify our methods or run it locally for free.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo" class="alt">
+      <div class="container">
+        <h2>Verifiable Before &amp; After Demo Storefront</h2>
+        <p class="section-lead">
+          Instead of cherry-picked claims or third-party shaming, we built a realistic fictional specialty-coffee storefront (<em>Roast &amp; Craft Coffee</em>) and ran our real <code>vitalsscout</code> CLI before and after applying our remediation sprint.
+        </p>
+
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Before and after diagnostic benchmark comparison">
+          <table>
+            <thead>
+              <tr>
+                <th>Measured Mobile Metric</th>
+                <th>Before Remediation</th>
+                <th>After VitalsScout Fixes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Lighthouse Performance</td>
+                <td><span class="badge badge-warn">75 / 100</span></td>
+                <td><span class="badge badge-good">100 / 100</span></td>
+              </tr>
+              <tr>
+                <td>Lighthouse Accessibility</td>
+                <td><span class="badge badge-warn">71 / 100</span></td>
+                <td><span class="badge badge-good">100 / 100</span></td>
+              </tr>
+              <tr>
+                <td>Lighthouse Best Practices</td>
+                <td><span class="badge badge-warn">89 / 100</span></td>
+                <td><span class="badge badge-good">96 / 100</span></td>
+              </tr>
+              <tr>
+                <td>Lighthouse SEO</td>
+                <td><span class="badge badge-warn">75 / 100</span></td>
+                <td><span class="badge badge-good">100 / 100</span></td>
+              </tr>
+              <tr>
+                <td>Total Blocking Time (TBT)</td>
+                <td>1,352ms (blocking script)</td>
+                <td>0ms</td>
+              </tr>
+              <tr>
+                <td>Cumulative Layout Shift (CLS)</td>
+                <td>0.013 (late banner jump)</td>
+                <td>0.000 (reserved slot)</td>
+              </tr>
+              <tr>
+                <td>axe-core WCAG 2.2 AA Violations</td>
+                <td>3 rules (6 DOM nodes)</td>
+                <td>0 violations (0 nodes)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="demo-links">
+          <a class="btn btn-secondary-light" href="./demo-before.html">View Unoptimized Demo Page</a>
+          <a class="btn btn-secondary-light" href="./demo-after.html">View Remediated Demo Page</a>
+          <a class="btn btn-secondary-light" href="./sample-before-report.html">Inspect Real "Before" Report</a>
+          <a class="btn btn-primary" href="./sample-after-report.html">Inspect Real "After" Report</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing">
+      <div class="container">
+        <h2>Transparent Fixed-Price Packages (USD)</h2>
+        <p class="section-lead">
+          Every paid package is scoped clearly up to 5 unique templates (e.g., Home, Collection, Product/Pricing, Cart/Step-1 Checkout, Contact/Blog) with zero surprise hourly billing.
+        </p>
+
+        <div class="grid-3">
+          <article class="card">
+            <div>
+              <h3>Tier 1: Core Technical Audit</h3>
+              <p class="price-tag">$149 USD</p>
+              <p class="sla">Delivery: 48 hours</p>
+              <ul class="clean">
+                <li>Up to 5 unique templates audited</li>
+                <li>Mobile Core Web Vitals &amp; asset diagnosis</li>
+                <li>WCAG 2.2 AA scan + manual keyboard review</li>
+                <li>Technical SEO, JSON-LD &amp; security header matrix</li>
+                <li>Prioritized CSS/HTML fix list + 1 verification re-scan within 7 days</li>
+              </ul>
+            </div>
+            <a class="btn btn-secondary-light" href="#request" data-select-tier="tier1">Select Core Audit ($149)</a>
+          </article>
+
+          <article class="card featured">
+            <div>
+              <span class="badge badge-good">Most Popular</span>
+              <h3>Tier 2: Audit + Code Fix Sprint</h3>
+              <p class="price-tag">$349 USD</p>
+              <p class="sla">Delivery: 3–5 business days</p>
+              <ul class="clean">
+                <li>Everything in Tier 1 Core Audit</li>
+                <li>Hands-on theme/frontend PR or patch pack for high-impact CWV, SEO &amp; WCAG 2.2 AA fixes</li>
+                <li>Accessible labels, contrast tokens, focus states, image dimensions &amp; schema fixes</li>
+                <li>Up to 2 revision rounds within scope</li>
+                <li>Verified Before &amp; After comparison report</li>
+              </ul>
+            </div>
+            <a class="btn btn-primary" href="#request" data-select-tier="tier2">Select Audit + Fix Sprint ($349)</a>
+          </article>
+
+          <article class="card">
+            <div>
+              <h3>Tier 3: Monthly Vitals Guard</h3>
+              <p class="price-tag">$99 USD / mo</p>
+              <p class="sla">Ongoing monthly regression check</p>
+              <ul class="clean">
+                <li>Monthly 5-template re-audit across CWV, SEO &amp; WCAG 2.2 AA</li>
+                <li>Catch regressions from new apps, banners, or theme edits</li>
+                <li>Up to 2 hours/month of preventative code patches</li>
+                <li>Cancel anytime before next cycle</li>
+              </ul>
+            </div>
+            <a class="btn btn-secondary-light" href="#request" data-select-tier="tier3">Select Monthly Guard ($99/mo)</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="request" class="alt">
+      <div class="container">
+        <h2>Scope Estimator &amp; Audit Request Builder</h2>
+        <p class="section-lead">
+          Configure your store URL and package below to generate a structured request brief. You can open a pre-filled request directly via GitHub Issues (takes 30 seconds) or copy the brief for email invoicing via Payoneer B2B (US ACH or card).
+        </p>
+
+        <form class="builder" id="brief-form">
+          <div class="field-grid">
+            <div>
+              <label class="field-label" for="site-url">Website / Store URL</label>
+              <input id="site-url" type="url" placeholder="https://yourstore.com" value="https://" required />
+            </div>
+            <div>
+              <label class="field-label" for="platform">Platform / Tech Stack</label>
+              <select id="platform">
+                <option value="Shopify">Shopify</option>
+                <option value="WooCommerce / WordPress">WooCommerce / WordPress</option>
+                <option value="Next.js / React">Next.js / React</option>
+                <option value="Webflow">Webflow</option>
+                <option value="Custom HTML / Other">Custom HTML / Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="package-tier">Package</label>
+              <select id="package-tier">
+                <option value="free">Free 1-Page Snapshot ($0 — 24h)</option>
+                <option value="tier1">Tier 1: Core 5-Template Audit ($149 USD — 48h)</option>
+                <option value="tier2" selected>Tier 2: Audit + Code Fix Sprint ($349 USD — 3–5 days)</option>
+                <option value="tier3">Tier 3: Monthly Vitals Guard ($99 USD/mo)</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset>
+            <legend class="field-label">Primary Areas to Inspect</legend>
+            <div class="checks">
+              <label class="check-item"><input type="checkbox" name="focus" value="Mobile Core Web Vitals (LCP/CLS/TBT)" checked /> Mobile Core Web Vitals</label>
+              <label class="check-item"><input type="checkbox" name="focus" value="WCAG 2.2 AA Accessibility (Contrast/Labels/Keyboard)" checked /> WCAG 2.2 AA Accessibility</label>
+              <label class="check-item"><input type="checkbox" name="focus" value="Technical SEO & JSON-LD Schema" checked /> Technical SEO &amp; Schema</label>
+            </div>
+          </fieldset>
+
+          <div>
+            <label class="field-label" for="notes">Optional Notes (5 key templates or preferred payment rail: Payoneer Invoice vs. Fiverr)</label>
+            <textarea id="notes" rows="2" placeholder="Example: Home, Collection, Product, Cart, Contact. Prefer Payoneer USD invoice."></textarea>
+          </div>
+
+          <div class="estimate-box" id="estimate-summary" aria-live="polite">
+            <strong>Selected Scope:</strong> Tier 2: Audit + Code Fix Sprint — <strong>$349 USD</strong> (3–5 business days SLA, up to 5 templates).
+          </div>
+
+          <label class="field-label" for="brief-output">Generated Request Brief (Preview)</label>
+          <pre class="brief-preview" id="brief-output"></pre>
+
+          <div class="cta-row">
+            <a class="btn btn-primary" id="github-issue-link" href="https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md" target="_blank" rel="noopener">Submit via GitHub Audit Issue</a>
+            <button class="btn btn-secondary-light" type="button" id="copy-brief-btn">Copy Request Brief</button>
+          </div>
+          <div class="status-note" id="copy-status" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container">
+        <h2>Frequently Asked Questions</h2>
+        <div class="grid-2">
+          <div>
+            <details open>
+              <summary>How is VitalsScout different from an accessibility overlay widget?</summary>
+              <p>Overlay widgets inject surface scripts that often fail assistive technologies and regulatory enforcement (including EU EAA reviews). VitalsScout identifies and fixes underlying HTML semantics, form labels, contrast tokens, focus states, and target sizes directly in your codebase.</p>
+            </details>
+            <details>
+              <summary>How do international payments work?</summary>
+              <p>B2B clients receive an official <strong>Payoneer Request a Payment</strong> invoice supporting US ACH bank debit, credit/debit cards, or local bank transfer (plus Fiverr marketplace escrow once our Fiverr gig is linked). Work starts once payment is verified.</p>
+            </details>
+          </div>
+          <div>
+            <details>
+              <summary>What counts as one "unique template" in the 5-template scope?</summary>
+              <p>One distinct page layout—for example: (1) Homepage, (2) Collection/Category grid, (3) Product or Pricing page, (4) Cart or Checkout Step 1, and (5) Contact or Blog post template. Auditing a template covers the reusable structure across those URLs.</p>
+            </details>
+            <details>
+              <summary>Does this include a legal VPAT or lawsuit immunity guarantee?</summary>
+              <p>No. VitalsScout is an engineering service, not a law firm. We provide transparent technical audits and code fixes aligned with WCAG 2.2 AA and Core Web Vitals, not legal advice or formal legal certification.</p>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div>
+        <strong>VitalsScout</strong> &mdash; Built &amp; operated by Ahmed Mohamed &bull; Transparent Open-Source Tooling
+      </div>
+      <div>
+        <a href="https://github.com/ahmed62001/vitalsscout">GitHub Repository</a>
+        <a href="./self-audit-report.html">Verify This Site's Live Self-Audit</a>
+        <a href="./terms.html">Scope, Refund &amp; Legal Terms</a>
+        <a href="./privacy.html">Privacy Notice</a>
+      </div>
+      <p class="disclaimer">
+        Disclaimer: VitalsScout delivers technical performance, SEO, and WCAG 2.2 AA accessibility diagnostics and frontend code remediation. We are not attorneys, and our reports/fixes do not constitute legal advice or a legal compliance guarantee under ADA, EAA, or other statutes.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var TIER_MAP = {
+        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', sla: 'Within 24 hours (1 URL)' },
+        tier1: { label: 'Tier 1: Core Technical Audit', price: '$149 USD', sla: '48 hours (up to 5 templates)' },
+        tier2: { label: 'Tier 2: Audit + Code Fix Sprint', price: '$349 USD', sla: '3–5 business days (up to 5 templates + PR fixes)' },
+        tier3: { label: 'Tier 3: Monthly Vitals Guard', price: '$99 USD/mo', sla: 'Monthly regression audit + 2h preventative fixes' }
+      };
+
+      var urlInput = document.getElementById('site-url');
+      var platformSelect = document.getElementById('platform');
+      var tierSelect = document.getElementById('package-tier');
+      var notesInput = document.getElementById('notes');
+      var summaryEl = document.getElementById('estimate-summary');
+      var outputEl = document.getElementById('brief-output');
+      var ghLink = document.getElementById('github-issue-link');
+      var copyBtn = document.getElementById('copy-brief-btn');
+      var copyStatus = document.getElementById('copy-status');
+
+      function updateBrief() {
+        var tier = TIER_MAP[tierSelect.value] || TIER_MAP.tier2;
+        var url = (urlInput.value || '').trim() || 'https://yourstore.com';
+        var platform = platformSelect.value;
+        var focuses = Array.from(document.querySelectorAll('input[name="focus"]:checked')).map(function (c) { return c.value; });
+        var notes = (notesInput.value || '').trim() || 'None provided.';
+
+        summaryEl.innerHTML = '<strong>Selected Scope:</strong> ' + tier.label + ' — <strong>' + tier.price + '</strong> (' + tier.sla + ').';
+
+        var brief = [
+          '## VitalsScout Audit Request',
+          '- Website URL: ' + url,
+          '- Platform: ' + platform,
+          '- Package: ' + tier.label + ' (' + tier.price + ')',
+          '- Turnaround SLA: ' + tier.sla,
+          '- Focus Areas: ' + (focuses.length ? focuses.join('; ') : 'General diagnostic'),
+          '- Notes: ' + notes
+        ].join('\n');
+
+        outputEl.textContent = brief;
+        var issueTitle = encodeURIComponent('[Audit Request] ' + url + ' (' + tier.price + ')');
+        var issueBody = encodeURIComponent(brief + '\n\n(Please remove or withhold any sensitive credentials before submitting.)');
+        ghLink.href = 'https://github.com/ahmed62001/vitalsscout/issues/new?title=' + issueTitle + '&body=' + issueBody;
+      }
+
+      document.querySelectorAll('[data-select-tier]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          tierSelect.value = el.getAttribute('data-select-tier');
+          updateBrief();
+        });
+      });
+
+      [urlInput, platformSelect, tierSelect, notesInput].forEach(function (el) {
+        el.addEventListener('input', updateBrief);
+        el.addEventListener('change', updateBrief);
+      });
+      document.querySelectorAll('input[name="focus"]').forEach(function (el) {
+        el.addEventListener('change', updateBrief);
+      });
+
+      copyBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(outputEl.textContent).then(function () {
+            copyStatus.textContent = 'Request brief copied to clipboard.';
+          }, function () {
+            copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
+          });
+        } else {
+          copyStatus.textContent = 'Select and copy the brief box above.';
+        }
+      });
+
+      updateBrief();
+    })();
+  </script>
+</body>
+</html>

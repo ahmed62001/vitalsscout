@@ -1,0 +1,65 @@
+# VitalsScout
+
+**Open-source WCAG 2.2 AA, Core Web Vitals (Google Lighthouse), Technical SEO, and HTTP Security Headers diagnostic CLI — plus productized remediation sprints for independent e-commerce stores and B2B SaaS teams.**
+
+- **Live Storefront & Interactive Demos:** https://ahmed62001.github.io/vitalsscout/
+- **Before vs. After Demo Store:** [Unoptimized Demo](https://ahmed62001.github.io/vitalsscout/demo-before.html) → [Remediated Demo](https://ahmed62001.github.io/vitalsscout/demo-after.html)
+- **Real Sample Reports:** [Before Report](https://ahmed62001.github.io/vitalsscout/sample-before-report.html) | [After Report](https://ahmed62001.github.io/vitalsscout/sample-after-report.html) | [Storefront Self-Audit](https://ahmed62001.github.io/vitalsscout/self-audit-report.html)
+
+---
+
+## What the CLI Checks
+
+For any HTTP/HTTPS URL, `vitalsscout` runs four local browser & protocol diagnostics (zero external API keys required):
+
+1. **Google Lighthouse (Mobile Emulation):** Performance, Accessibility, Best Practices, and SEO category scores plus LCP, FCP, CLS, TBT, Speed Index, TTFB, total byte weight, and top actionable savings.
+2. **axe-core WCAG 2.0 / 2.1 / 2.2 A & AA Scan:** Captures rule IDs, impact levels (`critical`, `serious`, `moderate`, `minor`), WCAG tags, node counts, and concrete CSS selectors / HTML snippets.
+3. **Technical SEO & DOM Hygiene:** Evaluates `<html lang>`, `<title>`, `<meta name="description">`, `<link rel="canonical">`, Open Graph tags, JSON-LD blocks, `<h1>` structure, missing image `alt` & `width`/`height`, unlabelled visible form fields, non-descriptive links, and small interactive targets (`<24x24px`, aligned with WCAG 2.2 `2.5.8`).
+4. **HTTP Security Headers & Crawlability:** Checks HTTPS, HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options` / `frame-ancestors`, `Referrer-Policy`, response compression, `/robots.txt`, and `/sitemap.xml`.
+
+Outputs three files per audit:
+- `<slug>-audit.json` (structured raw data)
+- `<slug>-report.html` (standalone, print-to-PDF-ready executive & developer report)
+- `<slug>-snapshot.md` (concise 1-page Markdown diagnostic summary)
+
+---
+
+## Quickstart
+
+### Prerequisites
+- Node.js `>= 20`
+- Local Google Chrome or Chromium installed (override path via `CHROME_PATH=/path/to/chrome` if needed)
+
+### Install & Run
+
+```bash
+git clone https://github.com/ahmed62001/vitalsscout.git
+cd vitalsscout
+npm install
+
+# Audit a URL and write reports to ./vitalsscout-reports
+node ./cli/vitalsscout.mjs https://example.com
+
+# Custom output folder and filename prefix
+node ./cli/vitalsscout.mjs https://example.com --out ./reports --slug example-home
+
+# Run automated local fixture test suite
+npm test
+```
+
+---
+
+## Need Hands-On Remediation?
+
+If you run a Shopify, WooCommerce, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend PR fixes:
+
+- **Free 1-Page Diagnostic Snapshot ($0):** [Open an Audit Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) or visit the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
+- **Tier 1 — Core 5-Template Audit ($149 USD, 48h)**
+- **Tier 2 — Audit + Code Fix Sprint ($349 USD, 3–5 business days)**
+- **Tier 3 — Monthly Vitals Guard ($99 USD/mo)**
+
+*Disclaimer: VitalsScout provides technical diagnostics and frontend engineering remediation aligned with WCAG 2.2 AA and Core Web Vitals. It is not a law firm and does not provide legal advice or formal ADA/EAA compliance guarantees.*
+
+## License
+
+MIT

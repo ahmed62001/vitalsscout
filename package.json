@@ -1,0 +1,34 @@
+{
+  "name": "vitalsscout",
+  "version": "1.0.0",
+  "description": "Open-source WCAG 2.2 AA, Core Web Vitals (Lighthouse), Technical SEO, and HTTP Security Headers diagnostic CLI.",
+  "type": "module",
+  "bin": {
+    "vitalsscout": "./cli/vitalsscout.mjs"
+  },
+  "scripts": {
+    "audit": "node ./cli/vitalsscout.mjs",
+    "test": "node ./test/vitalsscout.test.mjs",
+    "build-samples": "node ./scripts/build-samples.mjs"
+  },
+  "keywords": [
+    "accessibility",
+    "wcag",
+    "axe-core",
+    "lighthouse",
+    "core-web-vitals",
+    "seo",
+    "audit",
+    "cli"
+  ],
+  "author": "Ahmed Mohamed",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "axe-core": "^4.10.2",
+    "lighthouse": "^12.6.0",
+    "puppeteer-core": "^24.4.0"
+  }
+}

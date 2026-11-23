@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VitalsScout Audit Report — http://127.0.0.1:38973/demo-before.html</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --good: #047857;
+      --good-bg: #d1fae5;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --poor: #b91c1c;
+      --poor-bg: #fee2e2;
+      --accent: #0f766e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .wrap { max-width: 1020px; margin: 0 auto; padding: 32px 20px 64px; }
+    header {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 28px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 24px; }
+    header p { margin: 4px 0; color: #cbd5e1; font-size: 14px; }
+    .meta-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: #e2e8f0; }
+    .scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .score-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+    .score-num { font-size: 36px; font-weight: 800; line-height: 1.1; }
+    .score-label { margin-top: 6px; font-weight: 600; color: var(--muted); }
+    .status-good .score-num { color: var(--good); }
+    .status-warn .score-num { color: var(--warn); }
+    .status-poor .score-num { color: var(--poor); }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    h2 { margin: 0 0 14px; font-size: 19px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    th { font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pill-good { background: var(--good-bg); color: var(--good); }
+    .pill-warn { background: var(--warn-bg); color: var(--warn); }
+    .pill-poor { background: var(--poor-bg); color: var(--poor); }
+    .pill-muted { background: #e2e8f0; color: #334155; }
+    .small { font-size: 13px; }
+    .muted { color: var(--muted); }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; word-break: break-all; }
+    .violation-box { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .v-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .node-sample { background: #f8fafc; border-left: 3px solid var(--warn); padding: 8px 10px; margin-top: 8px; font-size: 12px; }
+    .clean-banner { background: var(--good-bg); color: var(--good); padding: 14px; border-radius: 8px; font-weight: 600; }
+    .disclaimer { font-size: 12px; color: var(--muted); background: #f1f5f9; padding: 14px; border-radius: 8px; }
+    @media print {
+      body { background: #fff; }
+      .wrap { padding: 0; }
+      section, .score-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>VitalsScout Technical Diagnostic Report</h1>
+      <p>Target URL: <strong>http://127.0.0.1:38973/demo-before.html</strong></p>
+      <div class="meta-grid">
+        <span>Audited: 2026-11-23T01:42:19.892Z</span>
+        <span>HTTP Status: 200</span>
+        <span>Detected Stack: Custom / Unidentified</span>
+        <span>Lighthouse v12.8.2</span>
+        <span>axe-core v4.14.1</span>
+      </div>
+    </header>
+
+    <div class="scores" aria-label="Lighthouse Mobile Category Scores">
+      
+      <div class="score-card status-warn">
+        <div class="score-num">75</div>
+        <div class="score-label">Performance</div>
+      </div>
+      <div class="score-card status-warn">
+        <div class="score-num">71</div>
+        <div class="score-label">Accessibility</div>
+      </div>
+      <div class="score-card status-warn">
+        <div class="score-num">89</div>
+        <div class="score-label">Best Practices</div>
+      </div>
+      <div class="score-card status-warn">
+        <div class="score-num">75</div>
+        <div class="score-label">SEO</div>
+      </div>
+    </div>
+
+    <section>
+      <h2>1. Core Web Vitals &amp; Mobile Performance Metrics</h2>
+      <table>
+        <thead><tr><th>Metric</th><th>Measured (Mobile)</th><th>Target Threshold</th></tr></thead>
+        <tbody>
+      <tr>
+        <td>Largest Contentful Paint (LCP)</td>
+        <td><span class="pill pill-good">901ms</span></td>
+        <td>&lt;= 2.50s</td>
+      </tr>
+      <tr>
+        <td>First Contentful Paint (FCP)</td>
+        <td><span class="pill pill-good">601ms</span></td>
+        <td>&lt;= 1.80s</td>
+      </tr>
+      <tr>
+        <td>Cumulative Layout Shift (CLS)</td>
+        <td><span class="pill pill-good">0.013</span></td>
+        <td>&lt;= 0.100</td>
+      </tr>
+      <tr>
+        <td>Total Blocking Time (TBT)</td>
+        <td><span class="pill pill-poor">1.35s</span></td>
+        <td>&lt;= 200ms</td>
+      </tr>
+      <tr>
+        <td>Speed Index</td>
+        <td><span class="pill pill-muted">1.04s</span></td>
+        <td>&lt;= 3.40s</td>
+      </tr>
+      <tr>
+        <td>Total Page Weight</td>
+        <td><span class="pill pill-muted">6 KiB</span></td>
+        <td>Lean payload</td>
+      </tr></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. Prioritized Remediation Roadmap (12 Findings)</h2>
+      <table>
+        <thead><tr><th>Priority</th><th>Area</th><th>Finding &amp; Evidence</th><th>Recommended Fix</th></tr></thead>
+        <tbody>
+      <tr>
+        <td><span class="pill pill-poor">Critical</span></td>
+        <td>WCAG 2.2 AA</td>
+        <td><strong>Images must have alternative text (image-alt)</strong><div class="muted small">1 DOM element(s) affected — e.g. img</div></td>
+        <td class="small">Inspect failing selector(s) and resolve rule &quot;image-alt&quot; per WCAG tags (wcag2a, wcag111). Reference: https://dequeuniversity.com/rules/axe/4.14/image-alt?application=axeAPI</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-poor">Critical</span></td>
+        <td>Core Web Vitals</td>
+        <td><strong>Reduce mobile main-thread blocking (TBT: 1352ms)</strong><div class="muted small">Total Blocking Time is 1352ms (target &lt;= 200ms; indicates INP responsiveness risk).</div></td>
+        <td class="small">Defer non-critical third-party scripts, code-split large JS bundles, and remove unused marketing tags/apps.</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-poor">Critical</span></td>
+        <td>WCAG 2.2 AA &amp; SEO</td>
+        <td><strong>Missing language attribute on &lt;html&gt;</strong><div class="muted small">&lt;html lang=&quot;...&quot;&gt; attribute is empty or missing.</div></td>
+        <td class="small">Add a valid BCP 47 language code such as &lt;html lang=&quot;en&quot;&gt; so screen readers select the correct pronunciation engine.</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-warn">Serious</span></td>
+        <td>WCAG 2.2 AA</td>
+        <td><strong>Elements must meet minimum color contrast ratio thresholds (color-contrast)</strong><div class="muted small">4 DOM element(s) affected — e.g. a[href$=&quot;#details&quot;]:nth-child(1)</div></td>
+        <td class="small">Inspect failing selector(s) and resolve rule &quot;color-contrast&quot; per WCAG tags (wcag2aa, wcag143). Reference: https://dequeuniversity.com/rules/axe/4.14/color-contrast?application=axeAPI</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-warn">Serious</span></td>
+        <td>WCAG 2.2 AA</td>
+        <td><strong>&lt;html&gt; element must have a lang attribute (html-has-lang)</strong><div class="muted small">1 DOM element(s) affected — e.g. html</div></td>
+        <td class="small">Inspect failing selector(s) and resolve rule &quot;html-has-lang&quot; per WCAG tags (wcag2a, wcag311). Reference: https://dequeuniversity.com/rules/axe/4.14/html-has-lang?application=axeAPI</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-warn">Serious</span></td>
+        <td>Technical SEO</td>
+        <td><strong>Missing meta description</strong><div class="muted small">No &lt;meta name=&quot;description&quot;&gt; tag found.</div></td>
+        <td class="small">Add a concise 120–155 character unique meta description describing the page offer.</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-warn">Serious</span></td>
+        <td>Technical SEO &amp; Accessibility</td>
+        <td><strong>Missing &lt;h1&gt; primary heading</strong><div class="muted small">Page contains 0 &lt;h1&gt; element(s).</div></td>
+        <td class="small">Use exactly one descriptive &lt;h1&gt; heading per page template and nest subsequent headings sequentially (&lt;h2&gt;, &lt;h3&gt;).</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-warn">Serious</span></td>
+        <td>WCAG 2.2 AA (2.5.8)</td>
+        <td><strong>6 interactive element(s) smaller than 24x24 CSS px</strong><div class="muted small">Examples: a &quot;Back to VitalsScout&quot; (112x15px); a &quot;Shop&quot; (34x16px); a &quot;Roasts&quot; (42x16px)</div></td>
+        <td class="small">Increase padding/min-size to at least 24x24px (ideally 44x44px for mobile ergonomics) to satisfy WCAG 2.2 Target Size (Minimum).</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-muted">Moderate</span></td>
+        <td>Technical SEO</td>
+        <td><strong>Missing canonical link tag</strong><div class="muted small">No &lt;link rel=&quot;canonical&quot;&gt; tag found.</div></td>
+        <td class="small">Add a self-referencing &lt;link rel=&quot;canonical&quot; href=&quot;...&quot;&gt; to avoid duplicate-URL indexing splits.</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-muted">Moderate</span></td>
+        <td>Core Web Vitals</td>
+        <td><strong>1 visible image(s) missing explicit width/height attributes</strong><div class="muted small">1 of 1 &lt;img&gt; tags lack explicit width or height HTML attributes.</div></td>
+        <td class="small">Add explicit width and height attributes (or CSS aspect-ratio) to prevent image-induced layout shifts (CLS).</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-muted">Moderate</span></td>
+        <td>Technical SEO</td>
+        <td><strong>No JSON-LD structured data detected</strong><div class="muted small">0 &lt;script type=&quot;application/ld+json&quot;&gt; blocks present.</div></td>
+        <td class="small">Add schema.org JSON-LD (Product, Organization, or SoftwareApplication) for rich search snippets.</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-muted">Moderate</span></td>
+        <td>Security Hygiene</td>
+        <td><strong>Missing 5 recommended HTTP security header(s)</strong><div class="muted small">Absent headers: Strict-Transport-Security, Content-Security-Policy, X-Content-Type-Options: nosniff, X-Frame-Options / frame-ancestors, Referrer-Policy</div></td>
+        <td class="small">Configure recommended security headers at your CDN/reverse proxy (Cloudflare, Netlify, Vercel, or origin server).</td>
+      </tr></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. WCAG 2.0 / 2.1 / 2.2 A &amp; AA Automated Scan (3 Rule Violations, 6 Nodes)</h2>
+      
+      <div class="violation-box">
+        <div class="v-head">
+          <span class="pill pill-warn">SERIOUS</span>
+          <strong>Elements must meet minimum color contrast ratio thresholds</strong>
+          <code>color-contrast</code>
+          <span class="muted">(4 nodes)</span>
+        </div>
+        <p class="small">Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds — Tags: <code>wcag2aa, wcag143</code></p>
+        
+          <div class="node-sample">
+            <div><strong>Selector:</strong> <code>a[href$=&quot;#details&quot;]:nth-child(1)</code></div>
+            <div><strong>HTML:</strong> <code>&lt;a href=&quot;#details&quot;&gt;Shop&lt;/a&gt;</code></div>
+          </div>
+          <div class="node-sample">
+            <div><strong>Selector:</strong> <code>a[href$=&quot;#details&quot;]:nth-child(2)</code></div>
+            <div><strong>HTML:</strong> <code>&lt;a href=&quot;#details&quot;&gt;Roasts&lt;/a&gt;</code></div>
+          </div>
+          <div class="node-sample">
+            <div><strong>Selector:</strong> <code>.low-contrast-note</code></div>
+            <div><strong>HTML:</strong> <code>&lt;p class=&quot;low-contrast-note&quot;&gt;Washed heirloom lot roasted weekly in small batches. Bright floral notes of jasmine, bergamot, and dark cocoa.&lt;/p&gt;</code></div>
+          </div>
+      </div>
+      <div class="violation-box">
+        <div class="v-head">
+          <span class="pill pill-warn">SERIOUS</span>
+          <strong>&lt;html&gt; element must have a lang attribute</strong>
+          <code>html-has-lang</code>
+          <span class="muted">(1 node)</span>
+        </div>
+        <p class="small">Ensure every HTML document has a lang attribute — Tags: <code>wcag2a, wcag311</code></p>
+        
+          <div class="node-sample">
+            <div><strong>Selector:</strong> <code>html</code></div>
+            <div><strong>HTML:</strong> <code>&lt;html&gt;</code></div>
+          </div>
+      </div>
+      <div class="violation-box">
+        <div class="v-head">
+          <span class="pill pill-poor">CRITICAL</span>
+          <strong>Images must have alternative text</strong>
+          <code>image-alt</code>
+          <span class="muted">(1 node)</span>
+        </div>
+        <p class="small">Ensure &lt;img&gt; elements have alternative text or a role of none or presentation — Tags: <code>wcag2a, wcag111</code></p>
+        
+          <div class="node-sample">
+            <div><strong>Selector:</strong> <code>img</code></div>
+            <div><strong>HTML:</strong> <code>&lt;img class=&quot;product-img&quot; src=&quot;./assets/roast-bag.svg&quot;&gt;</code></div>
+          </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Technical SEO, DOM &amp; HTTP Security Hygiene</h2>
+      <table>
+        <thead><tr><th>Check</th><th>Observed Status</th></tr></thead>
+        <tbody>
+          <tr><td>&lt;title&gt; Tag (60 chars)</td><td>Roast &amp; Craft Coffee — Demo Storefront (Before Optimization)</td></tr>
+          <tr><td>Meta Description (0 chars)</td><td>Missing</td></tr>
+          <tr><td>Canonical URL</td><td>Missing</td></tr>
+          <tr><td>&lt;html lang&gt; Attribute</td><td><span class="pill pill-warn">Missing</span></td></tr>
+          <tr><td>&lt;h1&gt; Count</td><td>0</td></tr>
+          <tr><td>Images Missing Alt / Dimensions</td><td>1 missing alt / 1 missing width-height (of 1)</td></tr>
+          <tr><td>Unlabelled Visible Form Fields</td><td>1</td></tr>
+          <tr><td>Small Interactive Targets (&lt;24x24px)</td><td>6</td></tr>
+          <tr><td>JSON-LD Structured Data Blocks</td><td>0</td></tr>
+          <tr><td>robots.txt / sitemap.xml</td><td><span class="pill pill-good">robots.txt OK</span> <span class="pill pill-good">sitemap.xml OK</span></td></tr>
+          <tr><td>HTTPS / HSTS / CSP / XCTO / Compression</td><td>
+            <span class="pill pill-warn">No HTTPS</span>
+            <span class="pill pill-warn">No HSTS</span>
+            <span class="pill pill-warn">No CSP</span>
+            <span class="pill pill-warn">No XCTO</span>
+            <span class="pill pill-warn">Uncompressed</span>
+          </td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <p class="disclaimer">
+      <strong>Scope &amp; Legal Notice:</strong> Generated by VitalsScout v1.0.0 using Google Lighthouse (mobile emulation) and axe-core (WCAG 2.0/2.1/2.2 A &amp; AA). Automated checks do not substitute for full assistive-technology keyboard/screen-reader testing. This technical report does not constitute legal advice or a legal compliance warranty under ADA, EAA, or local regulations.
+    </p>
+  </main>
+</body>
+</html>

@@ -202,9 +202,9 @@ async function runLighthouseAudit(url, port) {
         deviceScaleFactor: 2,
         disabled: false,
       },
-      maxWaitForLoad: 40000,
+      maxWaitForLoad: 25000,
     }),
-    55000,
+    70000,
     'Lighthouse mobile audit'
   );
 
@@ -623,7 +623,18 @@ export async function auditUrl(rawUrl) {
   const { browser, port } = await launchHeadlessBrowser();
   try {
     // Run sequentially on the shared Chrome instance so Lighthouse performance timings are uncontended
-    const lighthouseData = await runLighthouseAudit(effectiveUrl, port);
+    let lighthouseData;
+    try {
+      lighthouseData = await runLighthouseAudit(effectiveUrl, port);
+    } catch (err) {
+      lighthouseData = {
+        lighthouseVersion: null,
+        runtimeError: err?.message || String(err),
+        scores: { performance: null, accessibility: null, bestPractices: null, seo: null },
+        metrics: { lcpMs: null, fcpMs: null, cls: null, tbtMs: null, speedIndexMs: null, ttfbMs: null, totalBytes: null },
+        opportunities: [],
+      };
+    }
     const domAndAxe = await runDomAndAxeScan(browser, effectiveUrl);
 
     const { domHygiene, ...accessibility } = domAndAxe;

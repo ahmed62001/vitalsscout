@@ -261,6 +261,32 @@
       margin: 0 0 14px;
     }
     .status-note { min-height: 24px; font-size: 14px; font-weight: 600; color: var(--emerald-hover); margin-top: 8px; }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin: 0 0 24px;
+      padding: 0;
+      list-style: none;
+    }
+    .step-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .step-num {
+      display: inline-block;
+      background: var(--emerald-soft);
+      color: var(--emerald-hover);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+    }
+    .step-card h3 { margin: 0 0 4px; font-size: 16px; }
+    .step-card p { margin: 0; font-size: 14px; color: var(--muted); }
     details {
       background: #ffffff;
       border: 1px solid var(--border);
@@ -462,8 +488,31 @@
       <div class="container">
         <h2>Scope Estimator &amp; Audit Request Builder</h2>
         <p class="section-lead">
-          Configure your store URL and package below to generate a structured request brief. You can open a pre-filled request directly via GitHub Issues (takes 30 seconds) or copy the brief for email invoicing via Payoneer B2B (US ACH or card).
+          Configure your store URL and package below to generate a structured request brief. No GitHub account is required to order — copy your brief and message Ahmed directly on LinkedIn, or submit via GitHub Issues / Discussions.
         </p>
+
+        <ol class="steps-grid" aria-label="How Ordering and Payment Works">
+          <li class="step-card">
+            <span class="step-num">Step 1</span>
+            <h3>Build Your Brief</h3>
+            <p>Choose your package, stack, and target URL below.</p>
+          </li>
+          <li class="step-card">
+            <span class="step-num">Step 2</span>
+            <h3>Send via LinkedIn or GitHub</h3>
+            <p>Copy your brief and DM Ahmed on LinkedIn (no GitHub login needed) or open a GitHub Issue.</p>
+          </li>
+          <li class="step-card">
+            <span class="step-num">Step 3</span>
+            <h3>Payoneer B2B Invoice</h3>
+            <p>Receive scope confirmation in 24h plus a Payoneer USD invoice (US ACH, Visa/Mastercard, or wire).</p>
+          </li>
+          <li class="step-card">
+            <span class="step-num">Step 4</span>
+            <h3>Verified Delivery</h3>
+            <p>Get your 5-template audit in 48h ($149) or PR fixes + Before/After proof in 3–5 days ($349).</p>
+          </li>
+        </ol>
 
         <form class="builder" id="brief-form">
           <div class="field-grid">
@@ -484,10 +533,10 @@
             <div>
               <label class="field-label" for="package-tier">Package</label>
               <select id="package-tier">
-                <option value="free">Free 1-Page Snapshot ($0 — 24h)</option>
-                <option value="tier1">Tier 1: Core 5-Template Audit ($149 USD — 48h)</option>
-                <option value="tier2" selected>Tier 2: Audit + Code Fix Sprint ($349 USD — 3–5 days)</option>
-                <option value="tier3">Tier 3: Monthly Vitals Guard ($99 USD/mo)</option>
+                <option value="free">Free Snapshot ($0)</option>
+                <option value="tier1">Tier 1: Core Audit ($149)</option>
+                <option value="tier2" selected>Tier 2: Audit + Fix Sprint ($349)</option>
+                <option value="tier3">Tier 3: Monthly Guard ($99/mo)</option>
               </select>
             </div>
           </div>
@@ -502,20 +551,22 @@
           </fieldset>
 
           <div>
-            <label class="field-label" for="notes">Optional Notes (5 key templates or preferred payment rail: Payoneer Invoice vs. Fiverr)</label>
-            <textarea id="notes" rows="2" placeholder="Example: Home, Collection, Product, Cart, Contact. Prefer Payoneer USD invoice."></textarea>
+            <label class="field-label" for="notes">Optional Notes (5 key templates or preferred contact email for invoice)</label>
+            <textarea id="notes" rows="2" placeholder="Example: Home, Collection, Product, Cart, Contact. Send Payoneer USD invoice to team@yourstore.com."></textarea>
           </div>
 
           <div class="estimate-box" id="estimate-summary" aria-live="polite">
-            <strong>Selected Scope:</strong> Tier 2: Audit + Code Fix Sprint — <strong>$349 USD</strong> (3–5 business days SLA, up to 5 templates).
+            <strong>Selected Scope:</strong> Tier 2: Audit + Code Fix Sprint — <strong>$349 USD</strong> (3–5 business days, up to 5 templates + PR fixes).
           </div>
 
           <label class="field-label" for="brief-output">Generated Request Brief (Preview)</label>
           <pre class="brief-preview" id="brief-output"></pre>
 
-          <div class="cta-row">
-            <a class="btn btn-primary" id="github-issue-link" href="https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md" target="_blank" rel="noopener">Submit via GitHub Audit Issue</a>
-            <button class="btn btn-secondary-light" type="button" id="copy-brief-btn">Copy Request Brief</button>
+          <div class="cta-row" id="cta-actions">
+            <button class="btn btn-primary" type="button" id="copy-brief-btn">Copy Request Brief</button>
+            <a class="btn btn-secondary-light" id="linkedin-dm-link" href="https://www.linkedin.com/in/ahmed-mohamed-347211166/" target="_blank" rel="noopener">Message Ahmed on LinkedIn (No GitHub Needed)</a>
+            <a class="btn btn-secondary-light" id="github-issue-link" href="https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md" target="_blank" rel="noopener">Submit via GitHub Audit Issue</a>
+            <a class="btn btn-secondary-light" id="github-discussion-link" href="https://github.com/ahmed62001/vitalsscout/discussions" target="_blank" rel="noopener">Ask in GitHub Discussions</a>
           </div>
           <div class="status-note" id="copy-status" aria-live="polite"></div>
         </form>
@@ -570,10 +621,12 @@
 
   <script>
     (function () {
+      var BUSINESS_EMAIL = '';
+      var FIVERR_URL = '';
       var TIER_MAP = {
-        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', sla: 'Within 24 hours (1 URL)' },
-        tier1: { label: 'Tier 1: Core Technical Audit', price: '$149 USD', sla: '48 hours (up to 5 templates)' },
-        tier2: { label: 'Tier 2: Audit + Code Fix Sprint', price: '$349 USD', sla: '3–5 business days (up to 5 templates + PR fixes)' },
+        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', sla: 'Within 24 hours, 1 URL' },
+        tier1: { label: 'Tier 1: Core Technical Audit', price: '$149 USD', sla: '48 hours, up to 5 templates' },
+        tier2: { label: 'Tier 2: Audit + Code Fix Sprint', price: '$349 USD', sla: '3–5 business days, up to 5 templates + PR fixes' },
         tier3: { label: 'Tier 3: Monthly Vitals Guard', price: '$99 USD/mo', sla: 'Monthly regression audit + 2h preventative fixes' }
       };
 
@@ -586,6 +639,28 @@
       var ghLink = document.getElementById('github-issue-link');
       var copyBtn = document.getElementById('copy-brief-btn');
       var copyStatus = document.getElementById('copy-status');
+      var ctaActions = document.getElementById('cta-actions');
+      var copyResetTimer = null;
+
+      if (BUSINESS_EMAIL && ctaActions) {
+        var mailLink = document.createElement('a');
+        mailLink.className = 'btn btn-primary';
+        mailLink.id = 'email-brief-link';
+        mailLink.href = 'mailto:' + BUSINESS_EMAIL;
+        mailLink.textContent = 'Email Brief Directly';
+        ctaActions.insertBefore(mailLink, ctaActions.firstChild);
+      }
+
+      if (FIVERR_URL && ctaActions) {
+        var fiverrLink = document.createElement('a');
+        fiverrLink.className = 'btn btn-secondary-light';
+        fiverrLink.id = 'fiverr-checkout-link';
+        fiverrLink.href = FIVERR_URL;
+        fiverrLink.target = '_blank';
+        fiverrLink.rel = 'noopener';
+        fiverrLink.textContent = 'Order via Fiverr Escrow';
+        ctaActions.appendChild(fiverrLink);
+      }
 
       function updateBrief() {
         var tier = TIER_MAP[tierSelect.value] || TIER_MAP.tier2;
@@ -610,6 +685,38 @@
         var issueTitle = encodeURIComponent('[Audit Request] ' + url + ' (' + tier.price + ')');
         var issueBody = encodeURIComponent(brief + '\n\n(Please remove or withhold any sensitive credentials before submitting.)');
         ghLink.href = 'https://github.com/ahmed62001/vitalsscout/issues/new?title=' + issueTitle + '&body=' + issueBody;
+
+        var mailEl = document.getElementById('email-brief-link');
+        if (mailEl && BUSINESS_EMAIL) {
+          mailEl.href = 'mailto:' + BUSINESS_EMAIL + '?subject=' + issueTitle + '&body=' + encodeURIComponent(brief);
+        }
+      }
+
+      function markCopied() {
+        copyBtn.textContent = 'Brief Copied!';
+        copyStatus.textContent = 'Request brief copied to clipboard — paste it in a LinkedIn message to Ahmed or a GitHub Issue.';
+        if (copyResetTimer) clearTimeout(copyResetTimer);
+        copyResetTimer = setTimeout(function () {
+          copyBtn.textContent = 'Copy Request Brief';
+        }, 2500);
+      }
+
+      function fallbackCopy(text) {
+        var tmp = document.createElement('textarea');
+        tmp.value = text;
+        tmp.setAttribute('readonly', '');
+        tmp.style.position = 'absolute';
+        tmp.style.left = '-9999px';
+        document.body.appendChild(tmp);
+        tmp.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(tmp);
+        if (ok) {
+          markCopied();
+        } else {
+          copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
+        }
       }
 
       document.querySelectorAll('[data-select-tier]').forEach(function (el) {
@@ -628,14 +735,11 @@
       });
 
       copyBtn.addEventListener('click', function () {
+        var text = outputEl.textContent;
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(outputEl.textContent).then(function () {
-            copyStatus.textContent = 'Request brief copied to clipboard.';
-          }, function () {
-            copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
-          });
+          navigator.clipboard.writeText(text).then(markCopied, function () { fallbackCopy(text); });
         } else {
-          copyStatus.textContent = 'Select and copy the brief box above.';
+          fallbackCopy(text);
         }
       });
 

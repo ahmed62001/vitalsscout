@@ -173,9 +173,7 @@ function sanitizeCustomerOrderView(order) {
     network: order.network,
     networkDisplayName: order.networkDisplayName,
     usdtContract: order.usdtContract,
-    receivingAddress: order.receivingAddress,
     advertisedPriceUsdt: order.advertisedPriceUsdt,
-    matchingAdjustmentUsdt: order.matchingAdjustmentUsdt,
     amountDueUsdt: order.amountDueUsdt,
     state: order.state,
     statusReason: order.statusReason,
@@ -187,7 +185,6 @@ function sanitizeCustomerOrderView(order) {
     createdAt: order.createdAt,
     expiresAt: order.expiresAt,
     updatedAt: order.updatedAt,
-    paymentInstructions: `Send exactly ${order.amountDueUsdt} USDT on ${order.network} (${order.networkDisplayName}) to ${order.receivingAddress} before ${order.expiresAt}.`,
   };
 }
 
@@ -234,10 +231,9 @@ export function createPaymentHttpHandler({
             paymentAsset: config.paymentAsset,
             network: config.network,
             networkDisplayName: config.networkDisplayName,
-            receivingAddress: config.receivingAddress,
             binanceEnabled: Boolean(config.binanceEnabled),
             bscscanEnabled: Boolean(config.bscscanEnabled),
-            autoFulfillmentEnabled: Boolean(config.autoFulfillmentEnabled),
+            autoFulfillmentEnabled: false,
             minConfirmations: config.minConfirmations,
           },
           config,
@@ -260,6 +256,21 @@ export function createPaymentHttpHandler({
       }
 
       if (method === 'POST' && pathname === '/api/orders') {
+        const adminAuth = isAdminAuthorized(req, config);
+        if (!adminAuth.configured) {
+          sendJson(
+            req,
+            res,
+            503,
+            { ok: false, error: 'Order creation requires VITALS_ADMIN_TOKEN; public self-serve order creation is disabled.' },
+            config,
+          );
+          return;
+        }
+        if (!adminAuth.authorized) {
+          sendJson(req, res, 401, { ok: false, error: 'Unauthorized: operator authentication required to create orders.' }, config);
+          return;
+        }
         const body = await readJsonBody(req);
         try {
           const order = await engine.createOrder({
@@ -270,7 +281,7 @@ export function createPaymentHttpHandler({
           });
           sendJson(req, res, 201, { ok: true, order: sanitizeCustomerOrderView(order) }, config);
         } catch (err) {
-          const status = err?.code === 'CONCURRENT_INVOICE_LIMIT' ? 503 : 400;
+          const status = err?.code === 'ACTIVE_PAYMENT_WINDOW_LOCKED' ? 409 : err?.code === 'CONCURRENT_INVOICE_LIMIT' ? 503 : 400;
           sendJson(
             req,
             res,

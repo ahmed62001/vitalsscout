@@ -18,7 +18,7 @@ import {
   isAllowedRpcUrl,
   isValidTxHash,
   normalizeTxHash,
-} from '../docs/assets/usdt-verifier.js';
+} from '../cli/usdt-verifier.mjs';
 
 function isZeroPaddedAddressMatch(topicHex, targetAddress) {
   if (typeof topicHex !== 'string' || !/^0x0{24}[0-9a-f]{40}$/i.test(topicHex)) {

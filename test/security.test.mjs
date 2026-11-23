@@ -6,9 +6,10 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { assertSafeTargetUrl, auditUrl, isBlockedIp } from '../cli/audit-engine.mjs';
+import { launchHeadlessBrowser } from '../cli/browser-utils.mjs';
 import { renderHtmlReport } from '../cli/report-generator.mjs';
 import { recordVerifiedTransactionAtomically } from '../cli/verify-usdt-payment.mjs';
-import { resolveStaticPath } from '../scripts/build-samples.mjs';
+import { resolveStaticPath, startDocsServer } from '../scripts/build-samples.mjs';
 import {
   BSC_CHAIN_ID_HEX,
   PAYMENT_STATES,
@@ -17,7 +18,7 @@ import {
   USDT_BEP20_CONTRACT,
   isAllowedRpcUrl,
   verifyUsdtBep20Payment,
-} from '../docs/assets/usdt-verifier.js';
+} from '../cli/usdt-verifier.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -198,7 +199,7 @@ async function runSecurityTests() {
     fetchImpl: makeRpcFetch((_u, m) => {
       if (m === 'eth_chainId') return BSC_CHAIN_ID_HEX;
       if (m === 'eth_blockNumber') return '0x3e8';
-      if (m === 'eth_getTransactionReceipt') return { transactionHash: '0x' + 'f'.repeat(64), status: '0x1', blockNumber: '0x3e0', logs: [makeLog()] };
+      if (m === 'eth_getTransactionReceipt') return { transactionHash: '0x' + 'f'.repeat(64), status: '0x1', blockNumber: '0x3d0', logs: [makeLog()] };
       if (m === 'eth_getBlockByNumber') return { timestamp: '0x' + recentBlockSec.toString(16) };
       return null;
     }),
@@ -215,7 +216,7 @@ async function runSecurityTests() {
     fetchImpl: makeRpcFetch((_u, m) => {
       if (m === 'eth_chainId') return BSC_CHAIN_ID_HEX;
       if (m === 'eth_blockNumber') return '0x3e8';
-      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3e0', logs: [makeLog({ removed: true })] };
+      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3d0', logs: [makeLog({ removed: true })] };
       if (m === 'eth_getBlockByNumber') return { timestamp: '0x' + recentBlockSec.toString(16) };
       return null;
     }),
@@ -236,7 +237,7 @@ async function runSecurityTests() {
         return {
           transactionHash: TX,
           status: '0x1',
-          blockNumber: '0x3e0',
+          blockNumber: '0x3d0',
           logs: [makeLog({ topics: [TRANSFER_TOPIC, padAddress(SENDER), '0xdeadbeef' + '0'.repeat(16) + RECEIVING_WALLET.slice(2).toLowerCase()] })],
         };
       }
@@ -257,7 +258,7 @@ async function runSecurityTests() {
     fetchImpl: makeRpcFetch((_u, m) => {
       if (m === 'eth_chainId') return BSC_CHAIN_ID_HEX;
       if (m === 'eth_blockNumber') return '0x3e8';
-      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3e0', logs: [makeLog()] };
+      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3d0', logs: [makeLog()] };
       if (m === 'eth_getBlockByNumber') return { timestamp: '0x' + recentBlockSec.toString(16) };
       return null;
     }),
@@ -275,7 +276,7 @@ async function runSecurityTests() {
     fetchImpl: makeRpcFetch((_u, m) => {
       if (m === 'eth_chainId') return BSC_CHAIN_ID_HEX;
       if (m === 'eth_blockNumber') return '0x3e8';
-      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3e0', logs: [makeLog()] };
+      if (m === 'eth_getTransactionReceipt') return { transactionHash: TX, status: '0x1', blockNumber: '0x3d0', logs: [makeLog()] };
       if (m === 'eth_getBlockByNumber') return { timestamp: '0x' + oldBlockSec.toString(16) };
       return null;
     }),
@@ -296,13 +297,13 @@ async function runSecurityTests() {
       if (m === 'eth_getBlockByNumber') return { timestamp: '0x' + recentBlockSec.toString(16) };
       if (m === 'eth_getTransactionReceipt') {
         const logs = url.includes('rpc2') ? [makeLog({ data: encodeUint256(1000000000000000000n) })] : [makeLog()];
-        return { transactionHash: TX, status: '0x1', blockNumber: '0x3e0', logs };
+        return { transactionHash: TX, status: '0x1', blockNumber: '0x3d0', logs };
       }
       return null;
     }),
   });
   assert.equal(rQuorumMismatch.verified, false);
-  assert.equal(rQuorumMismatch.paymentState, PAYMENT_STATES.FAILED);
+  assert.equal(rQuorumMismatch.paymentState, PAYMENT_STATES.MANUAL_REVIEW);
   assert.equal(rQuorumMismatch.status, 'RPC_CONSENSUS_MISMATCH');
 
   // 4g. Concurrent TOCTOU atomic registry lock check (5 parallel claims -> 1 succeeds, 4 fail)
@@ -348,12 +349,15 @@ async function runSecurityTests() {
   const textTargets = [
     'README.md',
     '.github/ISSUE_TEMPLATE/audit-request.md',
+    '.github/ISSUE_TEMPLATE/config.yml',
     'docs/index.html',
     'docs/terms.html',
     'docs/privacy.html',
     'docs/assets/storefront.js',
-    'docs/assets/usdt-verifier.js',
+    'cli/usdt-verifier.mjs',
     'cli/verify-usdt-payment.mjs',
+    'cli/order-registry.mjs',
+    'cli/manual-orders.mjs',
   ];
   const forbiddenPaymentRe = /(payoneer|nsave|elevate pay|paypal|stripe|wise|paddle|polar\.sh|fiverr|bank transfer|credit card|debit card|\bvisa\b|\bmastercard\b|\bach\b|\bsepa\b|gumroad|payhip|lemon squeezy|paymob|fawry|instapay|escrow|invoice)/i;
   const obsoleteWallet = '0x78b86576' + '0a7154a8eec758ac1b9d4a9661bb8de9';
@@ -399,10 +403,183 @@ async function runSecurityTests() {
     'docs/self-audit-report.html',
   ]) {
     const content = fs.readFileSync(path.join(root, rel), 'utf8');
-    assert.ok(!/(ghp_[a-zA-Z0-9]{20}|github_pat_|BEGIN (RSA|EC|PRIVATE) KEY|96ahmedmohamed96|\/home\/kali|127\.0\.0\.1:\d+)/.test(content), `Sensitive pattern leaked in ${rel}`);
+    assert.ok(!/(ghp_[a-zA-Z0-9]{20}|github_pat_|BEGIN (RSA|EC|PRIVATE) KEY|@gmail\.com|\/home\/kali|127\.0\.0\.1:\d+)/i.test(content), `Sensitive pattern leaked in ${rel}`);
   }
 
-  console.log('PASS: All comprehensive security regression checks succeeded (XSS, SSRF, traversal, TOCTOU lock, CSP, USDT-only policy, secret hygiene).');
+  // =========================================================================
+  // 6. Manual-Payment Privacy, Anti-Exposure, Storefront E2E & Git Hygiene
+  // =========================================================================
+  const depositAddressLower = RECEIVING_WALLET.toLowerCase();
+  const walkFiles = (dir) => {
+    const out = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...walkFiles(full));
+      else if (entry.isFile()) out.push(full);
+    }
+    return out;
+  };
+
+  for (const publicDir of [path.join(root, 'docs'), path.join(root, '.github')]) {
+    for (const filePath of walkFiles(publicDir)) {
+      const content = fs.readFileSync(filePath, 'utf8').toLowerCase();
+      assert.ok(
+        !content.includes(depositAddressLower),
+        `Deposit address must NOT appear in public file: ${path.relative(root, filePath)}`,
+      );
+      assert.ok(
+        !content.includes('@gmail.com'),
+        `Personal Gmail domain (@gmail.com) must NOT appear in public file: ${path.relative(root, filePath)}`,
+      );
+      assert.ok(
+        !content.includes('mailto:vitalsscout@proton.me?'),
+        `mailto:vitalsscout@proton.me must NOT include query parameters in public file: ${path.relative(root, filePath)}`,
+      );
+    }
+  }
+  const readmeLower = fs.readFileSync(path.join(root, 'README.md'), 'utf8').toLowerCase();
+  assert.ok(!readmeLower.includes(depositAddressLower), 'Deposit address must NOT appear in README.md');
+  assert.ok(!readmeLower.includes('@gmail.com'), 'Personal Gmail domain (@gmail.com) must NOT appear in README.md');
+  assert.ok(readmeLower.includes('vitalsscout@proton.me'), 'Official intake email vitalsscout@proton.me must be documented in README.md');
+  assert.equal(fs.existsSync(path.join(root, 'docs/assets/usdt-bep20-qr.svg')), false);
+  assert.equal(fs.existsSync(path.join(root, 'docs/assets/usdt-verifier.js')), false);
+
+  const indexHtml = fs.readFileSync(path.join(root, 'docs/index.html'), 'utf8');
+  assert.ok(indexHtml.includes("connect-src 'none'"), 'Storefront CSP must enforce connect-src none');
+  assert.ok(indexHtml.includes("form-action 'none'"), 'Storefront CSP must enforce form-action none');
+  assert.ok(indexHtml.includes('<a href="mailto:vitalsscout@proton.me">'), 'docs/index.html must include clean <a href="mailto:vitalsscout@proton.me"> link');
+  assert.ok(indexHtml.includes('href="mailto:vitalsscout@proton.me"'), 'docs/index.html must include mailto:vitalsscout@proton.me CTA');
+  assert.ok(!/mailto:[^"'\s>]*\?/i.test(indexHtml), 'docs/index.html mailto links must have zero query parameters');
+  assert.ok(!/verify-usdt-btn|usdt-tx-hash|copy-wallet-btn|usdt-wallet-address/.test(indexHtml), 'Storefront must not expose browser payment verification or wallet copy widgets');
+
+  const termsHtml = fs.readFileSync(path.join(root, 'docs/terms.html'), 'utf8');
+  assert.ok(termsHtml.includes('vitalsscout@proton.me'), 'docs/terms.html must document vitalsscout@proton.me as official private contact channel');
+  assert.ok(!/mailto:[^"'\s>]*\?/i.test(termsHtml), 'docs/terms.html mailto links must have zero query parameters');
+
+  const privacyHtml = fs.readFileSync(path.join(root, 'docs/privacy.html'), 'utf8');
+  assert.ok(privacyHtml.includes('vitalsscout@proton.me'), 'docs/privacy.html must document vitalsscout@proton.me as official private contact channel');
+  assert.ok(!/mailto:[^"'\s>]*\?/i.test(privacyHtml), 'docs/privacy.html mailto links must have zero query parameters');
+
+  assert.ok(!/localStorage|fetch\(|usdt-verifier|Verified Payment|PAYMENT_STATES|issues\/new\?title=|issues\/new\?body=|mailto:[^'"`\s]*\?/.test(storefrontJs), 'storefront.js must not use localStorage, RPC fetch, browser verification claims, mailto query params, or dynamic GitHub Issue URLs');
+
+  // Headless Chromium E2E test of storefront privacy & manual-payment UI
+  const { server: docsServer, baseUrl: docsBaseUrl } = await startDocsServer(path.join(root, 'docs'));
+  const { browser } = await launchHeadlessBrowser();
+  try {
+    const page = await browser.newPage();
+    const consoleErrors = [];
+    const pageErrors = [];
+    const cspViolations = [];
+    const nonFaviconHttpErrors = [];
+
+    await page.evaluateOnNewDocument(() => {
+      window.__cspViolations = [];
+      document.addEventListener('securitypolicyviolation', (e) => {
+        window.__cspViolations.push({ directive: e.violatedDirective, blockedURI: e.blockedURI });
+      });
+    });
+    page.on('response', (res) => {
+      if (res.status() >= 400 && !res.url().endsWith('/favicon.ico')) {
+        nonFaviconHttpErrors.push(`${res.status()} ${res.url()}`);
+      }
+    });
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    page.on('pageerror', (err) => pageErrors.push(String(err)));
+
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.goto(`${docsBaseUrl}/index.html`, { waitUntil: 'networkidle0' });
+
+    for (const tier of ['audit', 'audit-fix']) {
+      await page.select('#package-tier', tier);
+      const state = await page.evaluate((addr) => {
+        const ghIssue = document.getElementById('github-issue-link');
+        const ghDisc = document.getElementById('github-discussion-link');
+        const emailCta = document.getElementById('email-intake-link');
+        const emailText = document.getElementById('intake-email-text')?.textContent?.trim() || '';
+        const brief = document.getElementById('brief-output')?.textContent || '';
+        const bodyText = document.body.innerText.toLowerCase();
+        const htmlLower = document.documentElement.innerHTML.toLowerCase();
+        return {
+          hasAddress: bodyText.includes(addr) || htmlLower.includes(addr),
+          ghIssueHidden: ghIssue?.hidden === true && getComputedStyle(ghIssue).display === 'none',
+          ghDiscHidden: ghDisc?.hidden === true && getComputedStyle(ghDisc).display === 'none',
+          emailCtaVisible: emailCta?.hidden === false && getComputedStyle(emailCta).display !== 'none',
+          emailCtaHref: emailCta?.getAttribute('href') || '',
+          emailText,
+          brief,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      }, depositAddressLower);
+
+      assert.equal(state.hasAddress, false, `Deposit address exposed in DOM for tier ${tier}`);
+      assert.equal(state.ghIssueHidden, true, `Public GitHub Issue link must be hidden for paid tier ${tier}`);
+      assert.equal(state.ghDiscHidden, true, `GitHub Discussions link must be hidden for paid tier ${tier}`);
+      assert.equal(state.emailCtaVisible, true, `Primary email CTA must be visible for paid tier ${tier}`);
+      assert.equal(state.emailCtaHref, 'mailto:vitalsscout@proton.me', `Primary email CTA href must be clean mailto:vitalsscout@proton.me for tier ${tier}`);
+      assert.equal(state.emailText, 'vitalsscout@proton.me', `Plain copyable email text must equal vitalsscout@proton.me for tier ${tier}`);
+      assert.ok(state.brief.includes('vitalsscout@proton.me'), `Generated brief must reference vitalsscout@proton.me (${tier})`);
+      assert.ok(!/Verified Payment|Payment State:\s*(Paid|Confirmed)|\bOrder ID:\s*VS-/i.test(state.brief), `Brief must not claim Paid/Verified or generate Order ID in browser (${tier})`);
+      assert.ok(state.scrollWidth <= 1280, `Desktop horizontal overflow detected for ${tier}: ${state.scrollWidth}`);
+    }
+
+    // Paid tier copy brief button provides private-channel instructions (never GitHub Issue)
+    await page.click('#copy-brief-btn');
+    await page.waitForFunction(() => (document.getElementById('copy-status')?.textContent || '').length > 0, { timeout: 3000 });
+    const copyNote = await page.evaluate(() => document.getElementById('copy-status')?.textContent || '');
+    assert.ok(
+      (copyNote.includes('private') || copyNote.includes('Copy blocked')) && !copyNote.includes('GitHub Issue'),
+      `Unexpected copy status for paid tier: ${copyNote}`,
+    );
+
+    // Free tier keeps GitHub issue link strictly static even with sensitive inputs typed
+    await page.select('#package-tier', 'free');
+    await page.type('#site-url', 'https://private-client.example.com');
+    await page.type('#notes', 'owner@private.example 0x111122223333');
+    const freeState = await page.evaluate(() => {
+      const ghIssue = document.getElementById('github-issue-link');
+      return {
+        ghIssueVisible: ghIssue?.hidden === false && getComputedStyle(ghIssue).display !== 'none',
+        ghHref: ghIssue?.getAttribute('href') || '',
+      };
+    });
+    assert.equal(freeState.ghIssueVisible, true);
+    assert.equal(freeState.ghHref, 'https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md');
+    assert.ok(!freeState.ghHref.includes('private-client') && !freeState.ghHref.includes('owner@private'), 'GitHub URL must never contain user inputs');
+
+    // Mobile responsive overflow check
+    await page.setViewport({ width: 375, height: 812 });
+    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(mobileOverflow <= 375, `Mobile horizontal overflow detected: ${mobileOverflow}`);
+
+    const collectedCsp = await page.evaluate(() => window.__cspViolations || []);
+    cspViolations.push(...collectedCsp);
+    const realConsoleErrors = consoleErrors.filter(
+      (msg) => !(nonFaviconHttpErrors.length === 0 && msg.includes('status of 404 (Not Found)')),
+    );
+    assert.deepEqual(nonFaviconHttpErrors, [], `Unexpected HTTP errors: ${nonFaviconHttpErrors.join('; ')}`);
+    assert.deepEqual(realConsoleErrors, [], `Browser console errors: ${realConsoleErrors.join('; ')}`);
+    assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join('; ')}`);
+    assert.deepEqual(cspViolations, [], `Browser CSP violations: ${JSON.stringify(cspViolations)}`);
+  } finally {
+    await browser.close();
+    docsServer.close();
+  }
+
+  // Git hygiene checks (no .env, no order registries, no secrets in tracked files or commit history)
+  const gitignoreContent = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
+  for (const requiredIgnore of ['.env', '.local-state/', 'manual-orders*.json', '*verified-usdt-txs*.json']) {
+    assert.ok(gitignoreContent.includes(requiredIgnore), `.gitignore missing ${requiredIgnore}`);
+  }
+  const { stdout: trackedFiles } = await execFileAsync('git', ['ls-files'], { cwd: root });
+  assert.ok(!/(^|\n)(\.env|\.local-state\/|.*manual-orders.*\.json|.*payment-orders.*\.json|.*verified-usdt-txs.*\.json)/m.test(trackedFiles), 'Sensitive env or order registry file tracked in git!');
+  const { stdout: historyFiles } = await execFileAsync('git', ['log', '--all', '--name-only', '--pretty=format:'], { cwd: root });
+  assert.ok(!/(^|\n)(\.env|\.local-state\/|.*manual-orders.*\.json|.*payment-orders.*\.json|.*verified-usdt-txs.*\.json)/m.test(historyFiles), 'Sensitive env or order registry file found in git history!');
+  const { stdout: historyDiff } = await execFileAsync('git', ['log', '-p'], { cwd: root, maxBuffer: 20 * 1024 * 1024 });
+  assert.ok(!/(ghp_[a-zA-Z0-9]{20}|github_pat_[a-zA-Z0-9_]{20}|BEGIN (RSA|EC|PRIVATE) KEY|[a-zA-Z0-9._%+-]+@gmail\.com|BINANCE_API_SECRET\s*=\s*['"]?[A-Za-z0-9]{16,})/i.test(historyDiff), 'Secret or private credential leaked in git commit diff history!');
+
+  console.log('PASS: All comprehensive security regression checks succeeded (XSS, SSRF, traversal, TOCTOU lock, CSP, USDT-only policy, manual-payment privacy E2E, Git hygiene).');
 }
 
 runSecurityTests().catch((err) => {

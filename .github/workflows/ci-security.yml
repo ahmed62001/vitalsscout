@@ -28,11 +28,14 @@ jobs:
       - name: Audit dependencies for High/Critical vulnerabilities
         run: npm audit --audit-level=high
 
-      - name: Run USDT (BEP20) payment verifier tests
+      - name: Run USDT (BEP20) on-chain verifier tests
         run: node ./test/usdt-verifier.test.mjs
 
-      - name: Run automated USDT payment verification engine tests
+      - name: Run manual order & payment workflow tests
+        run: node ./test/manual-orders.test.mjs
+
+      - name: Run hardened payment verification engine tests
         run: node ./test/payment-system.test.mjs
 
-      - name: Run security regression & USDT-only policy suite
+      - name: Run security regression, storefront privacy & USDT-only policy suite
         run: node ./test/security.test.mjs

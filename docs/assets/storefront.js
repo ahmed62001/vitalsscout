@@ -1,28 +1,25 @@
-import { PAYMENT_STATES, RECEIVING_WALLET, normalizeTxHash, verifyUsdtBep20Payment } from './usdt-verifier.js';
-
-const CLAIMED_TXS_KEY = 'vitalsscout_claimed_txs_v1';
-const VERIFY_COOLDOWN_MS = 2500;
-const RATE_WINDOW_MS = 60000;
-const MAX_CHECKS_PER_WINDOW = 10;
+const FREE_ISSUE_TEMPLATE_URL = 'https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md';
+const OFFICIAL_INTAKE_EMAIL = 'vitalsscout@proton.me';
+const OFFICIAL_INTAKE_MAILTO = `mailto:${OFFICIAL_INTAKE_EMAIL}`;
 
 const TIER_MAP = {
   free: {
     label: 'Free 1-Page Snapshot',
     price: '$0 USD',
     usdt: null,
-    sla: 'One-time free diagnostic, within 24 hours, 1 URL',
+    sla: 'One-time free diagnostic, within 24 hours, 1 public URL',
   },
   audit: {
     label: 'Website Diagnostic Audit',
     price: '$20.86 USD',
     usdt: '20.86',
-    sla: 'One-time payment via USDT (BSC — BEP20), 48 hours, up to 5 templates',
+    sla: 'One-time manual USDT (BSC — BEP20) payment after acceptance, 48 hours after payment verification, up to 5 templates',
   },
   'audit-fix': {
     label: 'Website Audit + Fix',
     price: '$48.86 USD',
     usdt: '48.86',
-    sla: 'One-time payment via USDT (BSC — BEP20), 3–5 business days, up to 5 templates + code fixes & verification re-audit',
+    sla: 'One-time manual USDT (BSC — BEP20) payment after acceptance, 3–5 business days after payment verification, up to 5 templates + code fixes & verification re-audit',
   },
 };
 
@@ -33,65 +30,21 @@ const notesInput = document.getElementById('notes');
 const summaryEl = document.getElementById('estimate-summary');
 const outputEl = document.getElementById('brief-output');
 const ghLink = document.getElementById('github-issue-link');
+const ghDiscussionLink = document.getElementById('github-discussion-link');
+const emailIntakeLink = document.getElementById('email-intake-link');
 const copyBtn = document.getElementById('copy-brief-btn');
+const copyEmailBtn = document.getElementById('copy-email-btn');
 const copyStatus = document.getElementById('copy-status');
 
-const usdtFreeNote = document.getElementById('usdt-free-note');
-const usdtPaidDetails = document.getElementById('usdt-paid-details');
-const usdtAmountDue = document.getElementById('usdt-amount-due');
-const copyWalletBtn = document.getElementById('copy-wallet-btn');
-const copyWalletStatus = document.getElementById('copy-wallet-status');
-const txHashInput = document.getElementById('usdt-tx-hash');
-const verifyUsdtBtn = document.getElementById('verify-usdt-btn');
-const verifyStatusEl = document.getElementById('usdt-verify-status');
-const orderIdPreviewEl = document.getElementById('order-id-preview');
-const paymentRefPreviewEl = document.getElementById('payment-ref-preview');
-
-function createRandomHexUpper(byteCount) {
-  const bytes = new Uint8Array(byteCount);
-  if (window.crypto && window.crypto.getRandomValues) {
-    window.crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < byteCount; i += 1) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
-  }
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
-const nowDate = new Date();
-const dateStamp = `${nowDate.getUTCFullYear()}${String(nowDate.getUTCMonth() + 1).padStart(2, '0')}${String(nowDate.getUTCDate()).padStart(2, '0')}`;
-const sessionOrderId = `VS-${dateStamp}-${createRandomHexUpper(3)}`;
-const sessionPaymentRef = `VS-PAY-${createRandomHexUpper(4)}`;
-
-if (orderIdPreviewEl) orderIdPreviewEl.textContent = sessionOrderId;
-if (paymentRefPreviewEl) paymentRefPreviewEl.textContent = sessionPaymentRef;
+const freeWorkflowNote = document.getElementById('free-workflow-note');
+const paidWorkflowNote = document.getElementById('paid-workflow-note');
+const selectedAmountDue = document.getElementById('selected-amount-due');
 
 let copyResetTimer = null;
-let walletResetTimer = null;
-let verifiedPayment = null;
-let lastVerifyAtMs = 0;
-const recentRpcAttempts = [];
+let copyEmailResetTimer = null;
 
-function loadClaimedTxs() {
-  try {
-    const raw = window.localStorage.getItem(CLAIMED_TXS_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveClaimedTx(txHash, targetUrl, serviceKey) {
-  try {
-    const map = loadClaimedTxs();
-    map[txHash] = { targetUrl, serviceKey, claimedAt: new Date().toISOString() };
-    window.localStorage.setItem(CLAIMED_TXS_KEY, JSON.stringify(map));
-  } catch {
-    // Ignore storage quota/privacy-mode failures cleanly
-  }
+function defaultCopyLabel(tier) {
+  return tier && tier.usdt ? 'Copy Private Request Brief' : 'Copy Free Snapshot Brief';
 }
 
 function renderSummary(tier) {
@@ -104,92 +57,66 @@ function renderSummary(tier) {
     lead,
     document.createTextNode(`${tier.label} — `),
     priceBold,
-    document.createTextNode(` (${tier.sla}).`)
+    document.createTextNode(` (${tier.sla}).`),
   );
 }
 
-function renderVerifyState(paymentState, cssClass, messageText, bscscanUrl = null, extraLinkText = 'Check BscScan') {
-  verifyStatusEl.className = `verify-box${cssClass ? ` ${cssClass}` : ''}`;
-  verifyStatusEl.textContent = '';
-
-  const stateBadge = document.createElement('strong');
-  stateBadge.textContent = `Payment State: ${paymentState} — `;
-  verifyStatusEl.appendChild(stateBadge);
-  verifyStatusEl.appendChild(document.createTextNode(messageText));
-
-  if (bscscanUrl && /^https:\/\/bscscan\.com\/tx\/0x[0-9a-f]{64}$/.test(bscscanUrl)) {
-    verifyStatusEl.appendChild(document.createTextNode(' '));
-    const link = document.createElement('a');
-    link.href = bscscanUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = extraLinkText;
-    verifyStatusEl.appendChild(link);
+function syncTierVisibility(tier) {
+  const isPaid = Boolean(tier.usdt);
+  if (freeWorkflowNote) freeWorkflowNote.hidden = isPaid;
+  if (paidWorkflowNote) paidWorkflowNote.hidden = !isPaid;
+  if (selectedAmountDue && tier.usdt) {
+    selectedAmountDue.textContent = `${tier.usdt} USDT`;
   }
-}
-
-function syncUsdtPanel(tier) {
-  if (!tier.usdt) {
-    usdtFreeNote.hidden = false;
-    usdtPaidDetails.hidden = true;
-  } else {
-    usdtFreeNote.hidden = true;
-    usdtPaidDetails.hidden = false;
-    usdtAmountDue.textContent = `${tier.usdt} USDT`;
+  if (emailIntakeLink) {
+    emailIntakeLink.href = OFFICIAL_INTAKE_MAILTO;
   }
-  if (verifiedPayment && verifiedPayment.serviceKey !== tierSelect.value) {
-    verifiedPayment = null;
-    renderVerifyState(
-      PAYMENT_STATES.PENDING,
-      'is-pending',
-      'Service changed — re-verify your BNB Smart Chain transaction hash for the selected amount before submitting.'
-    );
+  if (ghLink) {
+    ghLink.href = FREE_ISSUE_TEMPLATE_URL;
+    ghLink.hidden = isPaid;
+  }
+  if (ghDiscussionLink) {
+    ghDiscussionLink.hidden = isPaid;
+  }
+  if (copyBtn && !copyResetTimer) {
+    copyBtn.textContent = defaultCopyLabel(tier);
   }
 }
 
 function updateBrief() {
   const tier = TIER_MAP[tierSelect.value] || TIER_MAP['audit-fix'];
-  syncUsdtPanel(tier);
+  syncTierVisibility(tier);
+  renderSummary(tier);
 
   const url = (urlInput.value || '').trim().slice(0, 300) || 'https://yourstore.com';
   const platform = platformSelect.value;
   const focuses = Array.from(document.querySelectorAll('input[name="focus"]:checked')).map((c) => c.value);
   const notes = (notesInput.value || '').trim().slice(0, 1000) || 'None provided.';
 
-  renderSummary(tier);
+  const lines = tier.usdt
+    ? [
+        '## VitalsScout Private Service Request (DO NOT POST PUBLICLY)',
+        `- Official Private Contact Email: ${OFFICIAL_INTAKE_EMAIL}`,
+        `- Website URL: ${url}`,
+        `- Platform: ${platform}`,
+        `- Requested Service: ${tier.label} (${tier.price} / ${tier.usdt} USDT one-time)`,
+        `- Payment Method: USDT on BNB Smart Chain (BEP20, Chain ID 56) ONLY`,
+        `- Terms & SLA: ${tier.sla}`,
+        `- Focus Areas: ${focuses.length ? focuses.join('; ') : 'General diagnostic'}`,
+        `- Notes: ${notes}`,
+        `- Payment Status: Awaiting manual operator review, acceptance, and private payment instructions via ${OFFICIAL_INTAKE_EMAIL} (do not send funds yet).`,
+      ]
+    : [
+        '## VitalsScout Free 1-Page Snapshot Request ($0)',
+        `- Private Email Option: ${OFFICIAL_INTAKE_EMAIL} (or submit public URL via GitHub template)`,
+        `- Public Website URL: ${url}`,
+        `- Platform: ${platform}`,
+        `- Requested Service: ${tier.label} ($0)`,
+        `- Focus Areas: ${focuses.length ? focuses.join('; ') : 'General diagnostic'}`,
+        `- Public Notes (do not include private emails, credentials, or wallet data): ${notes}`,
+      ];
 
-  const lines = [
-    '## VitalsScout Audit Request',
-    ...(tier.usdt
-      ? [`- Order ID: ${sessionOrderId}`, `- Payment Reference: ${sessionPaymentRef}`]
-      : []),
-    `- Website URL: ${url}`,
-    `- Platform: ${platform}`,
-    `- Service: ${tier.label} (${tier.price})`,
-    `- Payment Method: ${tier.usdt ? 'USDT on BSC — BNB Smart Chain (BEP20) ONLY' : 'Free ($0)'}`,
-    `- Terms & SLA: ${tier.sla}`,
-    `- Focus Areas: ${focuses.length ? focuses.join('; ') : 'General diagnostic'}`,
-    `- Notes: ${notes}`,
-  ];
-
-  if (verifiedPayment && verifiedPayment.verified && verifiedPayment.paymentState === PAYMENT_STATES.CONFIRMED) {
-    lines.push(
-      `- Verified Payment [${verifiedPayment.paymentState}]: ${verifiedPayment.receivedUsdt} USDT (BSC BEP20) | Block #${verifiedPayment.blockNumber} (${verifiedPayment.confirmations} confirmations) | Tx: ${verifiedPayment.txHash} | BscScan: ${verifiedPayment.bscscanUrl}`
-    );
-  } else if (tier.usdt) {
-    const rawPendingHash = normalizeTxHash(txHashInput.value || '');
-    if (rawPendingHash) {
-      lines.push(`- Payment Status: Pending Independent Verification & Binance Deposit Match (Submitted Tx: ${rawPendingHash})`);
-    } else {
-      lines.push(`- Payment Status: Pending (${tier.usdt} USDT via BSC BEP20 to ${RECEIVING_WALLET})`);
-    }
-  }
-
-  const brief = lines.join('\n');
-  outputEl.textContent = brief;
-  const issueTitle = encodeURIComponent(`[Audit Request] ${url} (${tier.price})`);
-  const issueBody = encodeURIComponent(`${brief}\n\n(Please remove or withhold any sensitive credentials before submitting.)`);
-  ghLink.href = `https://github.com/ahmed62001/vitalsscout/issues/new?title=${issueTitle}&body=${issueBody}`;
+  outputEl.textContent = lines.join('\n');
 }
 
 function copyWithFallback(text, onSuccess, onFail) {
@@ -220,127 +147,46 @@ function copyWithFallback(text, onSuccess, onFail) {
 }
 
 copyBtn.addEventListener('click', () => {
+  const tier = TIER_MAP[tierSelect.value] || TIER_MAP['audit-fix'];
   copyWithFallback(
     outputEl.textContent,
     () => {
       copyBtn.textContent = 'Brief Copied!';
-      copyStatus.textContent = 'Request brief copied to clipboard — paste it in a LinkedIn message to Ahmed or a GitHub Issue.';
+      copyStatus.textContent = tier.usdt
+        ? 'Private request brief copied — email it privately to vitalsscout@proton.me and wait for manual acceptance before sending any payment.'
+        : 'Free snapshot brief copied — email it privately to vitalsscout@proton.me or paste only non-sensitive public URLs into the free GitHub snapshot template.';
       if (copyResetTimer) clearTimeout(copyResetTimer);
       copyResetTimer = setTimeout(() => {
-        copyBtn.textContent = 'Copy Request Brief';
+        copyResetTimer = null;
+        const currentTier = TIER_MAP[tierSelect.value] || TIER_MAP['audit-fix'];
+        copyBtn.textContent = defaultCopyLabel(currentTier);
       }, 2500);
     },
     () => {
-      copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
-    }
-  );
-});
-
-copyWalletBtn.addEventListener('click', () => {
-  copyWithFallback(
-    RECEIVING_WALLET,
-    () => {
-      copyWalletBtn.textContent = 'Address Copied!';
-      copyWalletStatus.textContent = 'USDT (BSC — BEP20) Binance deposit address copied.';
-      if (walletResetTimer) clearTimeout(walletResetTimer);
-      walletResetTimer = setTimeout(() => {
-        copyWalletBtn.textContent = 'Copy Wallet Address';
-      }, 2500);
+      copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually and email it to vitalsscout@proton.me.';
     },
-    () => {
-      copyWalletStatus.textContent = 'Copy blocked; select the wallet address above manually.';
-    }
   );
 });
 
-verifyUsdtBtn.addEventListener('click', async () => {
-  const serviceKey = tierSelect.value;
-  if (serviceKey !== 'audit' && serviceKey !== 'audit-fix') {
-    renderVerifyState(
-      PAYMENT_STATES.FAILED,
-      'is-error',
-      'Select Website Diagnostic Audit ($20.86) or Website Audit + Fix ($48.86) to verify payment.'
+if (copyEmailBtn) {
+  copyEmailBtn.addEventListener('click', () => {
+    copyWithFallback(
+      OFFICIAL_INTAKE_EMAIL,
+      () => {
+        copyEmailBtn.textContent = 'Email Copied!';
+        copyStatus.textContent = 'Copied vitalsscout@proton.me — paste your private request brief into an email to vitalsscout@proton.me.';
+        if (copyEmailResetTimer) clearTimeout(copyEmailResetTimer);
+        copyEmailResetTimer = setTimeout(() => {
+          copyEmailResetTimer = null;
+          copyEmailBtn.textContent = 'Copy Email (vitalsscout@proton.me)';
+        }, 2500);
+      },
+      () => {
+        copyStatus.textContent = 'Copy blocked by browser; copy vitalsscout@proton.me from the text above.';
+      },
     );
-    return;
-  }
-
-  const rawHash = (txHashInput.value || '').trim();
-  const normalized = normalizeTxHash(rawHash);
-  verifiedPayment = null;
-  updateBrief();
-
-  if (!normalized) {
-    renderVerifyState(
-      PAYMENT_STATES.FAILED,
-      'is-error',
-      'Invalid transaction hash. Enter a 66-character 0x... BNB Smart Chain txHash.'
-    );
-    return;
-  }
-
-  const targetUrl = (urlInput.value || '').trim() || 'https://yourstore.com';
-  const claimed = loadClaimedTxs();
-  if (claimed[normalized] && claimed[normalized].targetUrl && claimed[normalized].targetUrl !== targetUrl) {
-    renderVerifyState(
-      PAYMENT_STATES.FAILED,
-      'is-error',
-      `Duplicate transaction claim blocked: this txHash was already submitted in this browser for "${claimed[normalized].targetUrl}". Each txHash can pay for one order only.`,
-      `https://bscscan.com/tx/${normalized}`,
-      'View on BscScan'
-    );
-    return;
-  }
-
-  const now = Date.now();
-  while (recentRpcAttempts.length > 0 && now - recentRpcAttempts[0] > RATE_WINDOW_MS) {
-    recentRpcAttempts.shift();
-  }
-  if (now - lastVerifyAtMs < VERIFY_COOLDOWN_MS || recentRpcAttempts.length >= MAX_CHECKS_PER_WINDOW) {
-    renderVerifyState(
-      PAYMENT_STATES.PENDING,
-      'is-pending',
-      'Please wait a few seconds before re-checking BNB Smart Chain (rate-limit cooldown active).'
-    );
-    return;
-  }
-
-  lastVerifyAtMs = now;
-  recentRpcAttempts.push(now);
-  verifyUsdtBtn.disabled = true;
-  verifyUsdtBtn.textContent = 'Verifying on BSC...';
-  renderVerifyState(PAYMENT_STATES.PENDING, 'is-pending', 'Querying BNB Smart Chain Mainnet RPC quorum...');
-
-  try {
-    const result = await verifyUsdtBep20Payment({ txHash: normalized, serviceKey });
-    if (result.verified && result.paymentState === PAYMENT_STATES.CONFIRMED) {
-      verifiedPayment = result;
-      saveClaimedTx(normalized, targetUrl, serviceKey);
-      renderVerifyState(
-        PAYMENT_STATES.CONFIRMED,
-        'is-verified',
-        `Received ${result.receivedUsdt} USDT (BEP20) at block #${result.blockNumber} (${result.confirmations} confirmations, 2-RPC quorum). Attached to your brief below.`,
-        result.bscscanUrl,
-        'View on BscScan'
-      );
-      updateBrief();
-    } else if (result.paymentState === PAYMENT_STATES.EXPIRED) {
-      renderVerifyState(PAYMENT_STATES.EXPIRED, 'is-expired', result.message, result.bscscanUrl, 'View on BscScan');
-    } else if (result.paymentState === PAYMENT_STATES.PENDING) {
-      renderVerifyState(PAYMENT_STATES.PENDING, 'is-pending', result.message, result.bscscanUrl, 'Check BscScan');
-    } else {
-      renderVerifyState(PAYMENT_STATES.FAILED, 'is-error', result.message, result.bscscanUrl, 'Check BscScan');
-    }
-  } catch (err) {
-    renderVerifyState(
-      PAYMENT_STATES.FAILED,
-      'is-error',
-      `Verification failed: ${err && err.message ? err.message : String(err)}`
-    );
-  } finally {
-    verifyUsdtBtn.disabled = false;
-    verifyUsdtBtn.textContent = 'Verify Payment on BNB Smart Chain';
-  }
-});
+  });
+}
 
 document.querySelectorAll('[data-select-tier]').forEach((el) => {
   el.addEventListener('click', () => {
@@ -349,7 +195,7 @@ document.querySelectorAll('[data-select-tier]').forEach((el) => {
   });
 });
 
-[urlInput, platformSelect, tierSelect, notesInput, txHashInput].forEach((el) => {
+[urlInput, platformSelect, tierSelect, notesInput].forEach((el) => {
   el.addEventListener('input', updateBrief);
   el.addEventListener('change', updateBrief);
 });

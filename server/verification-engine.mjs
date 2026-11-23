@@ -10,7 +10,7 @@ import {
   ORDER_STATES,
   canTriggerDelivery,
 } from './order-states.mjs';
-import { isValidTxHash, normalizeTxHash } from '../docs/assets/usdt-verifier.js';
+import { isValidTxHash, normalizeTxHash } from '../cli/usdt-verifier.mjs';
 
 function appendHistory(order, fromState, toState, reason, nowIso, extra = undefined) {
   order.history = Array.isArray(order.history) ? order.history : [];
@@ -168,36 +168,8 @@ export function createPaymentVerificationEngine({
   const minConfirmations = Number(config?.minConfirmations || 15);
   const secrets = Array.isArray(config?.secretValues) ? config.secretValues : [];
 
-  async function triggerDeliveryIfAuthorized(orderSnapshot) {
-    if (typeof onOrderPaid !== 'function') {
-      return { triggered: false, reason: 'NO_HANDLER' };
-    }
-    if (!canTriggerDelivery(orderSnapshot, Boolean(config?.autoFulfillmentEnabled))) {
-      return {
-        triggered: false,
-        reason: config?.autoFulfillmentEnabled ? 'ALREADY_TRIGGERED_OR_NOT_PAID' : 'AUTO_FULFILLMENT_DISABLED',
-      };
-    }
-
-    const reserved = await store.mutate((data) => {
-      const current = data.orders[orderSnapshot.orderId];
-      if (!canTriggerDelivery(current, Boolean(config?.autoFulfillmentEnabled))) {
-        return null;
-      }
-      const nowIso = new Date(nowFn()).toISOString();
-      current.deliveryTriggered = true;
-      current.deliveryTriggeredAt = nowIso;
-      current.updatedAt = nowIso;
-      appendHistory(current, current.state, current.state, 'DELIVERY_TRIGGERED', nowIso);
-      return structuredClone(current);
-    });
-
-    if (!reserved) {
-      return { triggered: false, reason: 'IDEMPOTENT_SKIP' };
-    }
-
-    await onOrderPaid(reserved);
-    return { triggered: true, order: reserved };
+  async function triggerDeliveryIfAuthorized() {
+    return { triggered: false, reason: 'AUTO_FULFILLMENT_DISABLED' };
   }
 
   async function expireStaleOrdersInStore() {
@@ -666,6 +638,7 @@ export function createPaymentVerificationEngine({
 
       const matchedOrders = [];
       const ambiguousTxHashes = [];
+      const unrelatedTxHashes = [];
 
       for (const transfer of unclaimedTransfers) {
         const candidates = awaitingOrders.filter((ord) => {
@@ -681,40 +654,43 @@ export function createPaymentVerificationEngine({
           );
         });
 
-        if (candidates.length === 1) {
-          const target = candidates[0];
-          const idx = awaitingOrders.indexOf(target);
-          if (idx !== -1) {
-            awaitingOrders.splice(idx, 1);
+        // Shared Binance deposit address policy: NEVER auto-match or mark Paid by amount alone.
+        // Route any matching, duplicate, or unexpected/unrelated deposits to Manual Review.
+        const targetsToFlag = candidates.length > 0 ? candidates : awaitingOrders;
+        if (targetsToFlag.length > 0) {
+          if (candidates.length > 0) {
+            ambiguousTxHashes.push(transfer.txHash);
+          } else {
+            unrelatedTxHashes.push(transfer.txHash);
           }
-          const outcome = await this.verifyOrderByTxHash(target.orderId, transfer.txHash);
-          matchedOrders.push({
-            orderId: target.orderId,
-            txHash: transfer.txHash,
-            state: outcome.order?.state || null,
-          });
-        } else if (candidates.length > 1) {
-          ambiguousTxHashes.push(transfer.txHash);
+          const reasonCode =
+            candidates.length > 1
+              ? 'AMBIGUOUS_CONCURRENT_ORDER_MATCH'
+              : candidates.length === 1
+                ? 'SHARED_ADDRESS_MANUAL_REVIEW_REQUIRED'
+                : 'UNRELATED_DEPOSIT_DETECTED';
           const nowIso = new Date(nowFn()).toISOString();
           await store.mutate((data) => {
-            for (const cand of candidates) {
+            for (const cand of targetsToFlag) {
               const ord = data.orders[cand.orderId];
               if (ord && ord.state === ORDER_STATES.AWAITING_PAYMENT) {
                 ord.state = ORDER_STATES.MANUAL_REVIEW;
-                ord.statusReason = 'AMBIGUOUS_CONCURRENT_ORDER_MATCH';
-                ord.manualReviewReason = `Incoming deposit ${transfer.txHash} matched multiple active orders.`;
+                ord.statusReason = reasonCode;
+                ord.manualReviewReason = `Incoming shared-address deposit ${transfer.txHash} (${transfer.amountUsdt} USDT) requires manual operator attribution.`;
                 ord.updatedAt = nowIso;
                 appendHistory(
                   ord,
                   ORDER_STATES.AWAITING_PAYMENT,
                   ORDER_STATES.MANUAL_REVIEW,
-                  'AMBIGUOUS_CONCURRENT_ORDER_MATCH',
+                  reasonCode,
                   nowIso,
-                  { txHash: transfer.txHash },
+                  { txHash: transfer.txHash, amountUsdt: transfer.amountUsdt },
                 );
               }
             }
           });
+        } else {
+          unrelatedTxHashes.push(transfer.txHash);
         }
       }
 
@@ -734,6 +710,7 @@ export function createPaymentVerificationEngine({
         checkedOrderIds,
         matchedOrders,
         ambiguousTxHashes,
+        unrelatedTxHashes,
       };
     },
 

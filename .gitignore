@@ -5,3 +5,8 @@ tmp/
 .env.*
 .DS_Store
 .local-state/
+*.orders.json
+*verified-usdt-txs*.json
+manual-orders*.json
+customer-records/
+*.lock

@@ -223,17 +223,21 @@ function buildUsdtTransferTx({
   };
 }
 
-test('fail-closed defaults: Binance disabled without secrets and auto-fulfillment blocked even if flag set', () => {
+test('fail-closed defaults: Binance disabled without secrets, auto-fulfillment blocked unconditionally, non-loopback host rejected', () => {
   const unsetCfg = loadRuntimeConfig({});
   assert.equal(unsetCfg.binanceEnabled, false);
   assert.equal(unsetCfg.autoFulfillmentEnabled, false);
 
   const dangerousAttempt = loadRuntimeConfig({
+    BINANCE_API_KEY: 'key',
+    BINANCE_API_SECRET: 'secret',
     VITALS_AUTO_FULFILLMENT_ENABLED: 'true',
   });
-  assert.equal(dangerousAttempt.binanceEnabled, false);
+  assert.equal(dangerousAttempt.binanceEnabled, true);
   assert.equal(dangerousAttempt.autoFulfillmentEnabled, false);
-  assert.equal(dangerousAttempt.autoFulfillmentRequestedWithoutBinance, true);
+  assert.equal(dangerousAttempt.autoFulfillmentBlockedByPolicy, true);
+
+  assert.throws(() => loadRuntimeConfig({ VITALS_PAYMENT_HOST: '0.0.0.0' }), /non-loopback/);
 
   const client = createBinanceClient({});
   assert.equal(client.isEnabled(), false);
@@ -244,7 +248,7 @@ test('fail-closed defaults: Binance disabled without secrets and auto-fulfillmen
   assert.equal(redacted, 'err [REDACTED] and signature=[REDACTED]');
 });
 
-test('1. Valid exact USDT (BEP20) payment verified on BSC quorum + Binance deposit -> Paid', async (t) => {
+test('1. Valid exact USDT (BEP20) payment verified on BSC quorum + Binance deposit -> Paid (auto-fulfillment stays disabled)', async (t) => {
   const { storePath } = await createTempEnv(t);
   const txHash = makeHash('a');
   let deliveredCount = 0;
@@ -295,13 +299,14 @@ test('1. Valid exact USDT (BEP20) payment verified on BSC quorum + Binance depos
   assert.equal(res.order.blockchainVerified, true);
   assert.equal(res.order.binanceVerified, true);
   assert.equal(res.order.binanceDepositId, 'dep_001');
-  assert.equal(deliveredCount, 1);
+  assert.equal(res.order.deliveryTriggered, false);
+  assert.equal(deliveredCount, 0);
 
-  // Re-verifying is strictly idempotent and does NOT re-trigger delivery.
+  // Re-verifying is strictly idempotent and never triggers auto-fulfillment.
   const second = await engine.verifyOrderByTxHash(order.orderId, txHash);
   assert.equal(second.ok, true);
   assert.equal(second.idempotent, true);
-  assert.equal(deliveredCount, 1);
+  assert.equal(deliveredCount, 0);
 });
 
 test('2. Wrong token contract (non-USDT spoof) rejected -> Failed', async (t) => {
@@ -562,7 +567,7 @@ test('9. Fail-closed when Binance API is disabled, down, or has Travel Rule hold
   assert.notEqual(r3.order.state, ORDER_STATES.PAID);
 });
 
-test('10. Replay & concurrent race: duplicate TXID claim across two orders blocks second atomically', async (t) => {
+test('10. Replay & concurrent single-window / double-submit race protection', async (t) => {
   const { storePath } = await createTempEnv(t);
   const { state, engine } = createHarness({ storePath });
 
@@ -570,11 +575,6 @@ test('10. Replay & concurrent race: duplicate TXID claim across two orders block
     serviceId: 'diagnostic-audit',
     targetUrl: 'https://first.example.com',
     customerContact: 'first@example.com',
-  });
-  const ordB = await engine.createOrder({
-    serviceId: 'audit-and-fix',
-    targetUrl: 'https://second.example.com',
-    customerContact: 'second@example.com',
   });
 
   const sharedTx = makeHash('f');
@@ -593,33 +593,51 @@ test('10. Replay & concurrent race: duplicate TXID claim across two orders block
     transferType: 0,
   });
 
-  // Sequential replay rejected
+  // Pay ordA first, then create ordB and reject replay of sharedTx
   const resA = await engine.verifyOrderByTxHash(ordA.orderId, sharedTx);
   assert.equal(resA.ok, true);
   assert.equal(resA.order.state, ORDER_STATES.PAID);
+
+  const ordB = await engine.createOrder({
+    serviceId: 'audit-and-fix',
+    targetUrl: 'https://second.example.com',
+    customerContact: 'second@example.com',
+  });
 
   const resB = await engine.verifyOrderByTxHash(ordB.orderId, sharedTx);
   assert.equal(resB.ok, false);
   assert.equal(resB.rejected, true);
   assert.equal(resB.reason, 'TX_HASH_ALREADY_CLAIMED');
 
-  // Concurrent double-submit race on fresh orders
-  const ordC = await engine.createOrder({
-    serviceId: 'audit-and-fix',
-    targetUrl: 'https://race1.example.com',
-    customerContact: 'r1@example.com',
-  });
-  const ordD = await engine.createOrder({
-    serviceId: 'audit-and-fix',
-    targetUrl: 'https://race2.example.com',
-    customerContact: 'r2@example.com',
-  });
+  // Resolve ordB as expired/failed? Wait: ordB is Awaiting Payment; resolve via store or expire by advancing? No, let's test concurrent order creation lock separately:
+  const { dir } = await createTempEnv(t);
+  const { state: s2, engine: eng2 } = createHarness({ storePath: path.join(dir, 'race.json') });
+
+  const [c1, c2] = await Promise.allSettled([
+    eng2.createOrder({
+      serviceId: 'audit-and-fix',
+      targetUrl: 'https://race1.example.com',
+      customerContact: 'r1@example.com',
+    }),
+    eng2.createOrder({
+      serviceId: 'audit-and-fix',
+      targetUrl: 'https://race2.example.com',
+      customerContact: 'r2@example.com',
+    }),
+  ]);
+  const createdOrders = [c1, c2].filter((x) => x.status === 'fulfilled').map((x) => x.value);
+  const lockedErrs = [c1, c2].filter((x) => x.status === 'rejected').map((x) => x.reason);
+  assert.equal(createdOrders.length, 1);
+  assert.equal(lockedErrs.length, 1);
+  assert.equal(lockedErrs[0].code, 'ACTIVE_PAYMENT_WINDOW_LOCKED');
+
+  const ordC = createdOrders[0];
   const raceTx = makeHash('1');
-  state.txs[raceTx] = buildUsdtTransferTx({
+  s2.txs[raceTx] = buildUsdtTransferTx({
     txHash: raceTx,
     amountBaseUnits: parseDecimalToBaseUnits(ordC.amountDueUsdt),
   });
-  state.binanceDeposits.push({
+  s2.binanceDeposits.push({
     id: 'dep_race',
     amount: ordC.amountDueUsdt,
     coin: 'USDT',
@@ -630,13 +648,13 @@ test('10. Replay & concurrent race: duplicate TXID claim across two orders block
     transferType: 0,
   });
 
-  const [rC, rD] = await Promise.all([
-    engine.verifyOrderByTxHash(ordC.orderId, raceTx),
-    engine.verifyOrderByTxHash(ordD.orderId, raceTx),
+  const [rC1, rC2] = await Promise.all([
+    eng2.verifyOrderByTxHash(ordC.orderId, raceTx),
+    eng2.verifyOrderByTxHash(ordC.orderId, raceTx),
   ]);
-  const outcomes = [rC, rD];
-  assert.equal(outcomes.filter((x) => x.ok === true).length, 1);
-  assert.equal(outcomes.filter((x) => x.rejected === true && x.reason === 'TX_HASH_ALREADY_CLAIMED').length, 1);
+  assert.equal(rC1.ok, true);
+  assert.equal(rC2.ok, true);
+  assert.equal([rC1, rC2].some((x) => x.idempotent === true), true);
 });
 
 test('11. Reverted TX, invalid TXID format, and pre-order historical TX replay rejected -> Failed', async (t) => {
@@ -682,7 +700,7 @@ test('11. Reverted TX, invalid TXID format, and pre-order historical TX replay r
   assert.equal(oldRes.order.statusReason, 'TX_BEFORE_ORDER_CREATED');
 });
 
-test('12. Unique sub-cent matching, Etherscan V2 free-plan fallback -> eth_getLogs auto-reconcile, RPC consensus guard', async (t) => {
+test('12. Fixed pricing (no sub-cent discounts), single active window, shared-address scan routes to Manual Review, RPC consensus guard', async (t) => {
   const { storePath } = await createTempEnv(t);
 
   // Mock fetch simulating Binance SAPI + Etherscan V2 free-plan ChainID 56 rejection
@@ -696,26 +714,6 @@ test('12. Unique sub-cent matching, Etherscan V2 free-plan fallback -> eth_getLo
           message: 'NOTOK',
           result: 'Free API access is not supported for this chain. Please upgrade your api plan for full chain coverage.',
         }),
-      };
-    }
-    if (urlStr.includes('/sapi/v1/capital/deposit/hisrec')) {
-      return {
-        ok: true,
-        status: 200,
-        text: async () =>
-          JSON.stringify([
-            {
-              id: 'dep_match_2',
-              amount: '48.8599',
-              coin: 'USDT',
-              network: 'BSC',
-              address: RECEIVING_DEPOSIT_ADDRESS,
-              txId: makeHash('7'),
-              status: BINANCE_DEPOSIT_STATUS.SUCCESS,
-              transferType: 0,
-              insertTime: 1_800_000_020_000,
-            },
-          ]),
       };
     }
     return {
@@ -736,50 +734,54 @@ test('12. Unique sub-cent matching, Etherscan V2 free-plan fallback -> eth_getLo
     targetUrl: 'https://buyer1.example.com',
     customerContact: 'b1@example.com',
   });
-  const ord2 = await engine.createOrder({
-    serviceId: 'audit-and-fix',
-    targetUrl: 'https://buyer2.example.com',
-    customerContact: 'b2@example.com',
-  });
-
-  // Advertised price stays transparently 48.86; concurrent second order gets transparent -0.0001 matching slot
   assert.equal(ord1.advertisedPriceUsdt, '48.86');
+  assert.equal(ord1.matchingAdjustmentUsdt, '0.00');
   assert.equal(ord1.amountDueUsdt, '48.86');
-  assert.equal(ord2.advertisedPriceUsdt, '48.86');
-  assert.equal(ord2.matchingAdjustmentUsdt, '-0.0001');
-  assert.equal(ord2.amountDueUsdt, '48.8599');
 
-  const txForOrd2 = makeHash('7');
-  state.txs[txForOrd2] = buildUsdtTransferTx({
-    txHash: txForOrd2,
-    amountBaseUnits: parseDecimalToBaseUnits('48.8599'),
-  });
+  // Second concurrent unpaid order blocked by single active payment window lock
+  await assert.rejects(
+    () =>
+      engine.createOrder({
+        serviceId: 'audit-and-fix',
+        targetUrl: 'https://buyer2.example.com',
+        customerContact: 'b2@example.com',
+      }),
+    (err) => err?.code === 'ACTIVE_PAYMENT_WINDOW_LOCKED',
+  );
+
+  const txForOrd1 = makeHash('7');
   state.logs.push({
     address: USDT_BEP20_CONTRACT,
     removed: false,
     logIndex: '0x0',
     blockNumber: `0x${(50_000_080).toString(16)}`,
     blockHash: makeHash('d'),
-    transactionHash: txForOrd2,
+    transactionHash: txForOrd1,
     topics: [
       TRANSFER_TOPIC,
       padAddressTopic('0x2222222222222222222222222222222222222222'),
       padAddressTopic(RECEIVING_DEPOSIT_ADDRESS),
     ],
-    data: encodeUint256Hex(parseDecimalToBaseUnits('48.8599')),
+    data: encodeUint256Hex(parseDecimalToBaseUnits('48.86')),
   });
 
   const pollRes = await engine.pollAndReconcile();
   assert.equal(pollRes.ok, true);
   assert.equal(pollRes.bscscanStatus, 'ETHERSCAN_V2_FREE_PLAN_UNSUPPORTED');
   assert.equal(pollRes.scanSource, 'BSC_RPC_GET_LOGS');
-  assert.equal(pollRes.matchedOrders.length, 1);
-  assert.equal(pollRes.matchedOrders[0].orderId, ord2.orderId);
-  assert.equal(pollRes.matchedOrders[0].state, ORDER_STATES.PAID);
+  assert.equal(pollRes.matchedOrders.length, 0, 'Shared deposit address must NEVER auto-mark Paid by amount alone');
+  assert.ok(pollRes.ambiguousTxHashes.includes(txForOrd1));
 
-  // Order 1 remains untouched in Awaiting Payment!
   const ord1After = await engine.getOrder(ord1.orderId);
-  assert.equal(ord1After.state, ORDER_STATES.AWAITING_PAYMENT);
+  assert.equal(ord1After.state, ORDER_STATES.MANUAL_REVIEW);
+  assert.equal(ord1After.statusReason, 'SHARED_ADDRESS_MANUAL_REVIEW_REQUIRED');
+
+  // Close ord1 manually so another order can test RPC consensus mismatch
+  await engine.resolveManualReview({
+    orderId: ord1.orderId,
+    action: 'MARK_EXPIRED',
+    operatorNote: 'Closed before next window.',
+  });
 
   // RPC quorum disagreement routes safely to Manual Review
   const ord3 = await engine.createOrder({
@@ -825,14 +827,14 @@ test('13. Binance HMAC-SHA256 signature verification & Decimal/BaseUnit accuracy
   assert.equal(formatBaseUnits(parseDecimalToBaseUnits('20.86')), '20.86');
 });
 
-test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit 429, headers, manual resolution', async (t) => {
+test('14. HTTP API server security: auth on order creation, IDOR block, no public instructions, body limit 413, rate limit 429, headers, manual resolution', async (t) => {
   const { storePath } = await createTempEnv(t);
   const { state, store, config, engine } = createHarness({ storePath });
   const handler = createPaymentHttpHandler({
     engine,
     store,
     config,
-    rateLimitMax: 12,
+    rateLimitMax: 20,
     rateLimitWindowMs: 60_000,
   });
 
@@ -842,7 +844,7 @@ test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit
   const port = server.address().port;
   const baseUrl = `http://127.0.0.1:${port}`;
 
-  // Health check omits all secrets and sets strict security headers
+  // Health check omits all secrets & receivingAddress and sets strict security headers
   const healthRes = await fetch(`${baseUrl}/health`);
   assert.equal(healthRes.status, 200);
   assert.equal(healthRes.headers.get('x-content-type-options'), 'nosniff');
@@ -850,14 +852,28 @@ test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit
   assert.equal(healthRes.headers.get('referrer-policy'), 'no-referrer');
   const healthJson = await healthRes.json();
   assert.equal(healthJson.autoFulfillmentEnabled, false);
+  assert.equal(healthJson.receivingAddress, undefined);
   assert.equal(JSON.stringify(healthJson).includes('test_readonly'), false);
 
-  // Create order via HTTP API
+  // Unauthenticated POST /api/orders is denied (401)
+  const unauthCreateRes = await fetch(`${baseUrl}/api/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      serviceId: 'diagnostic-audit',
+      targetUrl: 'https://unauth.example.com',
+      customerContact: 'unauth@example.com',
+    }),
+  });
+  assert.equal(unauthCreateRes.status, 401);
+
+  // Authenticated operator creates order via HTTP API without exposing paymentInstructions/receivingAddress
   const createRes = await fetch(`${baseUrl}/api/orders`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Origin: 'https://ahmed62001.github.io',
+      Authorization: 'Bearer admin-super-secret-token-value',
     },
     body: JSON.stringify({
       serviceId: 'diagnostic-audit',
@@ -870,6 +886,23 @@ test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit
   const { order } = await createRes.json();
   assert.ok(order.orderId.startsWith('VS-'));
   assert.ok(order.paymentReference.startsWith('VS-PAY-'));
+  assert.equal(order.paymentInstructions, undefined);
+  assert.equal(order.receivingAddress, undefined);
+
+  // Second concurrent order denied (409 ACTIVE_PAYMENT_WINDOW_LOCKED)
+  const conflictCreateRes = await fetch(`${baseUrl}/api/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer admin-super-secret-token-value',
+    },
+    body: JSON.stringify({
+      serviceId: 'diagnostic-audit',
+      targetUrl: 'https://second-window.example.com',
+      customerContact: 'buyer2@example.com',
+    }),
+  });
+  assert.equal(conflictCreateRes.status, 409);
 
   // IDOR test: GET order without ?ref=... or with wrong ref is denied (403)
   const idorRes = await fetch(`${baseUrl}/api/orders/${order.orderId}?ref=WRONG-REF`);
@@ -883,34 +916,24 @@ test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit
   const unauthAdmin = await fetch(`${baseUrl}/api/admin/reconcile`, { method: 'POST' });
   assert.equal(unauthAdmin.status, 401);
 
-  // Submit a reverted TX with valid ref -> moves to Failed, then test Underpaid -> Admin resolve
-  const overOrderRes = await fetch(`${baseUrl}/api/orders`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      serviceId: 'diagnostic-audit',
-      targetUrl: 'https://overpay-api.example.com',
-      customerContact: 'over@example.com',
-    }),
-  });
-  const overOrder = (await overOrderRes.json()).order;
+  // Submit overpayment on active order -> Overpaid -> Admin resolve -> Paid
   const overTx = makeHash('7');
   state.txs[overTx] = buildUsdtTransferTx({
     txHash: overTx,
     amountBaseUnits: parseDecimalToBaseUnits('22.00'),
     blockNumber: 50_000_075,
   });
-  const subOver = await fetch(`${baseUrl}/api/orders/${overOrder.orderId}/submit-tx`, {
+  const subOver = await fetch(`${baseUrl}/api/orders/${order.orderId}/submit-tx`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paymentReference: overOrder.paymentReference, txHash: overTx }),
+    body: JSON.stringify({ paymentReference: order.paymentReference, txHash: overTx }),
   });
   assert.equal(subOver.status, 200);
   const subOverJson = await subOver.json();
   assert.equal(subOverJson.order.state, ORDER_STATES.OVERPAID);
 
   // Admin resolve with valid Bearer token approves Overpaid -> Paid with audit note
-  const resolveRes = await fetch(`${baseUrl}/api/admin/orders/${overOrder.orderId}/resolve`, {
+  const resolveRes = await fetch(`${baseUrl}/api/admin/orders/${order.orderId}/resolve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -929,14 +952,17 @@ test('14. HTTP API server security: auth, IDOR block, body limit 413, rate limit
   const oversized = 'A'.repeat(20_000);
   const bigRes = await fetch(`${baseUrl}/api/orders`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer admin-super-secret-token-value',
+    },
     body: JSON.stringify({ serviceId: 'diagnostic-audit', targetUrl: `https://a.com/${oversized}`, customerContact: 'x' }),
   });
   assert.equal(bigRes.status, 413);
 
   // Rate limit triggers 429 cleanly
   let hit429 = false;
-  for (let i = 0; i < 15; i += 1) {
+  for (let i = 0; i < 25; i += 1) {
     const r = await fetch(`${baseUrl}/api/orders/${order.orderId}?ref=${order.paymentReference}`);
     if (r.status === 429) {
       hit429 = true;

@@ -1,6 +1,6 @@
 # VitalsScout
 
-**Open-source WCAG 2.2 AA, Core Web Vitals (Google Lighthouse), Technical SEO, and HTTP Security Headers diagnostic CLI — plus strictly one-time remediation sprints paid exclusively in USDT (BEP20).**
+**Open-source WCAG 2.2 AA, Core Web Vitals (Google Lighthouse), Technical SEO, and HTTP Security Headers diagnostic CLI — plus strictly one-time remediation sprints paid manually in USDT (BEP20).**
 
 - **Live Storefront & Interactive Demos:** https://ahmed62001.github.io/vitalsscout/
 - **Before vs. After Demo Store:** [Unoptimized Demo](https://ahmed62001.github.io/vitalsscout/demo-before.html) → [Remediated Demo](https://ahmed62001.github.io/vitalsscout/demo-after.html)
@@ -43,30 +43,36 @@ node ./cli/vitalsscout.mjs https://example.com
 # Custom output folder and filename prefix
 node ./cli/vitalsscout.mjs https://example.com --out ./reports --slug example-home
 
-# Run full test suite (USDT verifier + security regression suite + audit engine)
+# Run full test suite (USDT verifier + manual order workflow + security regression + audit engine)
 npm test
 
-# Independently verify a one-time USDT (BEP20) payment on BNB Smart Chain
-npm run verify-usdt -- <txHash> --service audit-fix --record verified-txs.json --order-id ORDER-001
+# Operator CLI: manage local manual orders & payment verification (stored in .local-state/manual-orders.json, excluded from Git)
+npm run orders -- --help
 
-# Run backend dual-source automated payment verification API (Binance API disabled fail-closed unless env secrets configured)
-npm run start:payment-api
+# Operator CLI: independently verify an on-chain USDT (BEP20) transaction (>= 15 confirmations, 2-RPC quorum)
+npm run verify-usdt -- <txHash> --service audit-fix --record .local-state/verified-txs.json --order-id VS-20261123-EXAMPLE
 ```
 
 ---
 
-## One-Time Audit or Code Repair Services (USDT BEP20 Only)
+## One-Time Audit or Code Repair Services (Manual USDT BEP20 Workflow Only)
 
 If you run a Shopify, WooCommerce, Webflow, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend fixes (**strictly one-time payment — zero subscriptions; payable exclusively via USDT on BNB Smart Chain BEP20**):
 
 - **Payment Asset:** `USDT`
 - **Network:** `BNB Smart Chain (BEP20)` (`Chain ID 56`)
-- **Network Display Name:** `BSC`
 - **Official USDT BEP20 Token Contract:** `0x55d398326f99059fF775485246999027B3197955` (`18` decimals)
-- **Binance BSC Deposit Address:** `0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2`
-- **Free 1-Page Diagnostic Snapshot ($0):** [Open an Audit Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) or visit the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
-- **Website Diagnostic Audit ($20.86 USD / 20.86 USDT one-time, 48h):** Performance analysis, Core Web Vitals assessment, technical SEO inspection, WCAG 2.2 AA checks, and actionable recommendations across up to 5 templates
-- **Website Audit + Fix ($48.86 USD / 48.86 USDT one-time, 3–5 business days):** Complete audit plus actual code-level fixes within agreed scope, before-and-after comparisons, and verification through a new re-audit
+- **Official Private Customer Contact Email:** `vitalsscout@proton.me`
+- **Free 1-Page Diagnostic Snapshot ($0):** Email `vitalsscout@proton.me`, [Open a Public Snapshot Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) (public URLs only; never post private contact details or paid requests), or use the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
+- **Website Diagnostic Audit ($20.86 USD / 20.86 USDT one-time, 48h after payment verification):** Performance analysis, Core Web Vitals assessment, technical SEO inspection, WCAG 2.2 AA checks, and actionable recommendations across up to 5 templates
+- **Website Audit + Fix ($48.86 USD / 48.86 USDT one-time, 3–5 business days after payment verification):** Complete audit plus actual code-level fixes within agreed scope, before-and-after comparisons, and verification through a new re-audit
+
+### Manual Order & Payment Sequence (Privacy & Shared-Address Protection)
+
+1. **Private Request First:** Paid orders are **never** submitted via public GitHub Issues. Use the brief builder on [the VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/#request), copy your generated Private Request Brief, and email it privately to `vitalsscout@proton.me`.
+2. **Manual Acceptance & Local Order ID:** The operator reviews the request, accepts it manually, and records an authoritative Order ID in the private local registry (`npm run orders`).
+3. **Single Active Payment Window:** Because the deposit address is shared, payment instructions are **not** shown publicly on the storefront and are issued privately via `vitalsscout@proton.me` for at most one unresolved paid order at a time.
+4. **Private TxHash & Manual Verification:** After sending exact `20.86 USDT` or `48.86 USDT` on BSC (BEP20), reply privately in the same email thread at `vitalsscout@proton.me` with your `0x...` transaction hash and sending wallet address (or exchange withdrawal confirmation). Customer-submitted hashes remain labeled *"Customer-submitted transaction hash — UNVERIFIED."* until the operator independently verifies Chain ID 56, official USDT contract, exact recipient, exact net amount, successful receipt, `>= 15` block confirmations, local replay uniqueness, and a matching *Completed/Credited* record in Binance Deposit History before marking the order `Paid` and starting manual fulfillment. Automatic fulfillment is disabled.
 
 *Disclaimer: VitalsScout provides technical diagnostics and frontend engineering remediation aligned with WCAG 2.2 AA and Core Web Vitals. It is not a law firm and does not provide legal advice or formal ADA/EAA compliance guarantees.*
 

@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
-  BASE_UNITS_PER_TENTH_MILLI_USDT,
   DEFAULT_INVOICE_TTL_SECONDS,
-  MAX_CONCURRENT_DISCOUNT_STEPS,
   NETWORK_DISPLAY_NAME,
   NETWORK_NAME,
   PAYMENT_ASSET,
@@ -12,15 +13,40 @@ import {
   SERVICES,
   USDT_BEP20_CONTRACT,
 } from './config.mjs';
-import { formatBaseUnits } from './binance-client.mjs';
 import { ORDER_STATES, SLOT_RESERVING_STATES } from './order-states.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const DOCS_DIR = path.resolve(PROJECT_ROOT, 'docs');
 
 const STALE_LOCK_MS = 10_000;
 const LOCK_RETRY_MS = 15;
-const RECENT_EXPIRED_COLLISION_GUARD_MS = 10 * 60 * 1000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isInsideDir(targetPath, parentDir) {
+  const rel = path.relative(parentDir, targetPath);
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+function validateStoreFilePath(rawFilePath) {
+  const resolved = path.resolve(rawFilePath);
+  const realDocs = fsSync.existsSync(DOCS_DIR) ? fsSync.realpathSync(DOCS_DIR) : DOCS_DIR;
+  if (isInsideDir(resolved, DOCS_DIR) || isInsideDir(resolved, realDocs)) {
+    throw new Error('Refusing to place order store inside public docs/ directory.');
+  }
+  for (const checkPath of [resolved, `${resolved}.lock`]) {
+    if (fsSync.existsSync(checkPath)) {
+      const lst = fsSync.lstatSync(checkPath);
+      if (lst.isSymbolicLink() || !lst.isFile()) {
+        throw new Error(`Refusing symlink or non-regular store file: ${checkPath}`);
+      }
+    }
+  }
+  return resolved;
 }
 
 function defaultState() {
@@ -91,62 +117,57 @@ function generatePaymentReference(ordersMap) {
   throw new Error('Failed to generate unique Payment Reference.');
 }
 
-function allocateUniqueAmountSlot(service, ordersMap, nowMs) {
-  const reservedAmounts = new Set();
+function assertSingleActivePaymentWindow(ordersMap, nowMs) {
+  const blocking = [];
   for (const order of Object.values(ordersMap)) {
-    if (!order || order.serviceId !== service.id) {
+    if (!order || !SLOT_RESERVING_STATES.has(order.state)) {
       continue;
     }
     const isExpiredAwaiting =
       order.state === ORDER_STATES.AWAITING_PAYMENT && nowMs > Number(order.expiresAtMs || 0);
-    const recentlyExpired =
-      (order.state === ORDER_STATES.EXPIRED || isExpiredAwaiting) &&
-      Number(order.expiresAtMs || 0) + RECENT_EXPIRED_COLLISION_GUARD_MS > nowMs;
-    const isReservingState = !isExpiredAwaiting && SLOT_RESERVING_STATES.has(order.state);
-    if (isReservingState || recentlyExpired) {
-      reservedAmounts.add(String(order.amountDueBaseUnits));
+    if (!isExpiredAwaiting) {
+      blocking.push(order.orderId);
     }
   }
-
-  for (let step = 0; step <= MAX_CONCURRENT_DISCOUNT_STEPS; step += 1) {
-    const adjustment = BigInt(step) * BASE_UNITS_PER_TENTH_MILLI_USDT;
-    const candidate = service.baseUnits - adjustment;
-    const candidateStr = candidate.toString();
-    if (!reservedAmounts.has(candidateStr)) {
-      return {
-        step,
-        advertisedPriceBaseUnits: service.baseUnits.toString(),
-        matchingAdjustmentBaseUnits: (-adjustment).toString(),
-        amountDueBaseUnits: candidateStr,
-        advertisedPriceUsdt: service.advertisedPriceUsdt,
-        matchingAdjustmentUsdt: adjustment === 0n ? '0.00' : `-${formatBaseUnits(adjustment)}`,
-        amountDueUsdt: formatBaseUnits(candidate),
-      };
-    }
+  if (blocking.length > 0) {
+    const err = new Error(
+      `Only one active unpaid order window is permitted on the shared deposit address (blocked by: ${blocking.join(', ')}).`,
+    );
+    err.code = 'ACTIVE_PAYMENT_WINDOW_LOCKED';
+    err.blockingOrderIds = blocking;
+    throw err;
   }
-
-  const err = new Error(
-    `Concurrent unpaid invoice slot limit reached for ${service.name}; cannot issue unique matching amount.`,
-  );
-  err.code = 'CONCURRENT_INVOICE_LIMIT';
-  throw err;
 }
 
 /**
  * Atomic file-backed store with in-process mutex + cross-process exclusive lockfile.
- * Stores all USDT amounts in exact 18-decimal string base units and enforces global TXID / deposit uniqueness.
+ * Enforces single active payment window, exact prices (no sub-cent discounts), and restrictive permissions.
  * @param {string} filePath
  * @param {object} [options]
  */
 export function createOrderStore(filePath, options = {}) {
-  const resolvedPath = path.resolve(filePath);
+  const resolvedPath = validateStoreFilePath(filePath);
   const lockPath = `${resolvedPath}.lock`;
   const dirPath = path.dirname(resolvedPath);
   const nowFn = options.nowFn || (() => Date.now());
   let queue = Promise.resolve();
 
-  async function acquireFileLock() {
+  async function ensureDir() {
     await fs.mkdir(dirPath, { recursive: true, mode: 0o700 });
+    const sharedRoots = new Set([
+      path.resolve('/'),
+      path.resolve(os.tmpdir()),
+      path.resolve(os.homedir()),
+      PROJECT_ROOT,
+    ]);
+    if (!sharedRoots.has(path.resolve(dirPath))) {
+      await fs.chmod(dirPath, 0o700).catch(() => {});
+    }
+  }
+
+  async function acquireFileLock() {
+    validateStoreFilePath(resolvedPath);
+    await ensureDir();
     const deadline = Date.now() + STALE_LOCK_MS;
 
     while (true) {
@@ -162,12 +183,16 @@ export function createOrderStore(filePath, options = {}) {
           throw err;
         }
         try {
-          const stat = await fs.stat(lockPath);
+          const stat = await fs.lstat(lockPath);
+          if (stat.isSymbolicLink()) {
+            throw new Error(`Refusing symlink lockfile: ${lockPath}`);
+          }
           if (Date.now() - stat.mtimeMs > STALE_LOCK_MS) {
             await fs.unlink(lockPath).catch(() => {});
             continue;
           }
-        } catch {
+        } catch (statErr) {
+          if (String(statErr?.message || '').includes('symlink')) throw statErr;
           continue;
         }
         if (Date.now() > deadline) {
@@ -187,6 +212,7 @@ export function createOrderStore(filePath, options = {}) {
   }
 
   async function readRaw() {
+    validateStoreFilePath(resolvedPath);
     try {
       const content = await fs.readFile(resolvedPath, 'utf8');
       return normalizeStoreData(JSON.parse(content));
@@ -199,11 +225,14 @@ export function createOrderStore(filePath, options = {}) {
   }
 
   async function writeAtomic(data) {
-    await fs.mkdir(dirPath, { recursive: true, mode: 0o700 });
+    validateStoreFilePath(resolvedPath);
+    await ensureDir();
     const tmpPath = `${resolvedPath}.tmp.${process.pid}.${crypto.randomBytes(4).toString('hex')}`;
     const payload = JSON.stringify(data, null, 2);
     await fs.writeFile(tmpPath, payload, { encoding: 'utf8', mode: 0o600 });
+    await fs.chmod(tmpPath, 0o600);
     await fs.rename(tmpPath, resolvedPath);
+    await fs.chmod(resolvedPath, 0o600);
   }
 
   function runExclusive(task) {
@@ -278,9 +307,9 @@ export function createOrderStore(filePath, options = {}) {
 
       return this.mutate((data) => {
         const nowMs = nowFn();
+        assertSingleActivePaymentWindow(data.orders, nowMs);
         const orderId = generateOrderId(data.orders, nowMs);
         const paymentReference = generatePaymentReference(data.orders);
-        const slot = allocateUniqueAmountSlot(service, data.orders, nowMs);
         const createdAtIso = new Date(nowMs).toISOString();
         const expiresAtMs = nowMs + ttlSeconds * 1000;
 
@@ -294,12 +323,12 @@ export function createOrderStore(filePath, options = {}) {
           networkDisplayName: NETWORK_DISPLAY_NAME,
           usdtContract: USDT_BEP20_CONTRACT,
           receivingAddress: RECEIVING_DEPOSIT_ADDRESS,
-          advertisedPriceUsdt: slot.advertisedPriceUsdt,
-          advertisedPriceBaseUnits: slot.advertisedPriceBaseUnits,
-          matchingAdjustmentUsdt: slot.matchingAdjustmentUsdt,
-          matchingAdjustmentBaseUnits: slot.matchingAdjustmentBaseUnits,
-          amountDueUsdt: slot.amountDueUsdt,
-          amountDueBaseUnits: slot.amountDueBaseUnits,
+          advertisedPriceUsdt: service.advertisedPriceUsdt,
+          advertisedPriceBaseUnits: service.baseUnits.toString(),
+          matchingAdjustmentUsdt: '0.00',
+          matchingAdjustmentBaseUnits: '0',
+          amountDueUsdt: service.advertisedPriceUsdt,
+          amountDueBaseUnits: service.baseUnits.toString(),
           targetUrl,
           customerContact,
           notes,
@@ -318,14 +347,14 @@ export function createOrderStore(filePath, options = {}) {
           binanceVerified: false,
           deliveryTriggered: false,
           deliveryTriggeredAt: null,
-          statusReason: 'INVOICE_CREATED',
+          statusReason: 'ORDER_CREATED',
           manualReviewReason: null,
           history: [
             {
               timestamp: createdAtIso,
               fromState: null,
               toState: ORDER_STATES.AWAITING_PAYMENT,
-              reason: 'INVOICE_CREATED',
+              reason: 'ORDER_CREATED',
             },
           ],
         };

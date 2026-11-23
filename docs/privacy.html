@@ -18,13 +18,13 @@
       <p><strong>Effective Date:</strong> November 23, 2026</p>
 
       <h2>1. Static Storefront &amp; Zero Tracking Cookies</h2>
-      <p>This static storefront is hosted on GitHub Pages. VitalsScout does not install third-party ad pixels, behavioral analytics cookies, or cross-site trackers on this website. The interactive scope builder runs locally inside your browser and does not transmit data until you choose to verify a BNB Smart Chain transaction hash via public RPC nodes or submit your brief.</p>
+      <p>This static storefront is hosted on GitHub Pages with no backend server. VitalsScout does not install third-party ad pixels, behavioral analytics cookies, or cross-site trackers, makes zero outbound blockchain or API requests from your browser (`<code>connect-src 'none'</code>`), and does not use browser <code>localStorage</code> as an order or payment database. The request brief builder runs strictly inside your browser until you copy and email your brief privately to <a href="mailto:vitalsscout@proton.me"><code>vitalsscout@proton.me</code></a> (the <code>mailto:vitalsscout@proton.me</code> link carries zero query parameters so your form inputs are never embedded in URLs).</p>
 
-      <h2>2. Client Confidentiality</h2>
-      <p>Paid audit deliverables and repository/staging reviews are handled privately for the commissioning client and are never published in our public open-source repository. Only the fictional <em>Roast &amp; Craft Coffee</em> demo pages and VitalsScout's own self-audit appear publicly as sample reports.</p>
+      <h2>2. Client Confidentiality &amp; No Public Paid-Order Exposure</h2>
+      <p>Our official dedicated private intake and customer contact channel is <a href="mailto:vitalsscout@proton.me"><code>vitalsscout@proton.me</code></a>. Paid orders, customer website URLs, email addresses, private contact handles, Order IDs, wallet addresses, and transaction hashes are never submitted through public GitHub Issues or stored in public repositories. Operator-maintained order and verification records are stored locally with restrictive filesystem permissions and excluded from Git commits. Paid deliverables and repository/staging reviews are handled privately for the commissioning client. Free 1-page snapshots may be requested privately via <code>vitalsscout@proton.me</code> or via the sanitized public template only when using publicly shareable URLs without private personal data.</p>
 
-      <h2>3. Payment Security</h2>
-      <p>USDT (BEP20 on BNB Smart Chain) is the only accepted payment method. VitalsScout never collects, handles, or stores banking passwords, payment cards, wallet seed phrases, or private keys, and never initiates or signs cryptocurrency transactions on a customer's behalf.</p>
+      <h2>3. Manual Payment Security</h2>
+      <p>USDT (BEP20 on BNB Smart Chain) is the only accepted payment method. Payment instructions are issued manually only after private request acceptance, and payment verification is performed manually by the operator (the browser never verifies or marks payments as Paid). VitalsScout never collects, handles, or stores banking passwords, payment cards, Binance API credentials, wallet seed phrases, or private keys, and never initiates, signs, or executes cryptocurrency transactions on a customer's behalf.</p>
     </div>
   </main>
 </body>

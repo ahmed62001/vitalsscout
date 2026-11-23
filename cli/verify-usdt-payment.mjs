@@ -1,41 +1,83 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  CUSTOMER_TX_UNVERIFIED_LABEL,
   DEFAULT_MAX_TX_AGE_SECONDS,
   PAYMENT_STATES,
   normalizeTxHash,
   verifyUsdtBep20Payment,
-} from '../docs/assets/usdt-verifier.js';
+} from './usdt-verifier.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DOCS_DIR = path.resolve(__dirname, '../docs');
 
 function printHelp() {
-  console.log(`VitalsScout USDT (BEP20) Payment Verifier
+  console.log(`VitalsScout USDT (BEP20) On-Chain Verifier (Operator Use Only)
+
+NOTE: Passing this on-chain check does NOT mark an order Paid.
+Every customer-submitted hash remains "${CUSTOMER_TX_UNVERIFIED_LABEL}"
+until you verify uniqueness, confirm Completed/Credited status in Binance Deposit History,
+and confirm consistency via "npm run orders -- verify-payment".
 
 Usage:
   node ./cli/verify-usdt-payment.mjs <txHash> --service <audit|audit-fix> [options]
 
 Options:
   --service <key>     Required: "audit" ($20.86) or "audit-fix" ($48.86)
-  --record <path>     JSON array registry for replay protection (must end with .json)
+  --record <path>     JSON array registry for replay protection (must end with .json, outside docs/)
   --order-id <id>     Optional unique order identifier bound to this payment
-  --created-at <iso>  Optional ISO-8601 order creation timestamp
-  --expires-at <iso>  Optional ISO-8601 order expiration timestamp
+  --created-at <iso>  Optional ISO-8601 payment window creation timestamp
+  --expires-at <iso>  Optional ISO-8601 payment window expiration timestamp
   --max-age <secs>    Max tx age in seconds (default: ${DEFAULT_MAX_TX_AGE_SECONDS})
   --allow-any-age     Disable max-age expiration check for manual delayed review
   -h, --help          Show this help message
 `);
 }
 
-function validateRecordPath(rawPath) {
+function isInsideDir(targetPath, parentDir) {
+  const rel = path.relative(parentDir, targetPath);
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+function ensurePrivateParentDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true, mode: 0o700 });
+  const resolvedDir = path.resolve(dirPath);
+  const sharedRoots = new Set([
+    path.resolve('/'),
+    path.resolve(os.tmpdir()),
+    path.resolve(os.homedir()),
+    path.resolve(__dirname, '..'),
+  ]);
+  if (!sharedRoots.has(resolvedDir)) {
+    try {
+      fs.chmodSync(resolvedDir, 0o700);
+    } catch {
+      // Ignore if directory is owned by another entity
+    }
+  }
+}
+
+export function validateRecordPath(rawPath) {
   const resolved = path.resolve(process.cwd(), rawPath);
   if (!resolved.toLowerCase().endsWith('.json')) {
     throw new Error('Registry path (--record) must end with .json');
+  }
+  const realDocs = fs.existsSync(DOCS_DIR) ? fs.realpathSync(DOCS_DIR) : DOCS_DIR;
+  if (isInsideDir(resolved, DOCS_DIR) || isInsideDir(resolved, realDocs)) {
+    throw new Error('Refusing to store payment records inside public docs/ directory.');
   }
   if (fs.existsSync(resolved)) {
     const lst = fs.lstatSync(resolved);
     if (lst.isSymbolicLink() || !lst.isFile()) {
       throw new Error(`Registry path must be a regular non-symlink .json file: ${resolved}`);
+    }
+    const realResolved = fs.realpathSync(resolved);
+    if (isInsideDir(realResolved, realDocs)) {
+      throw new Error('Refusing symlink/target resolving inside public docs/ directory.');
     }
   }
   return resolved;
@@ -135,6 +177,10 @@ function findDuplicateInRegistry(registry, txHash, orderId) {
   if (txHash && registry.some((e) => String(e?.txHash || '').toLowerCase() === txHash)) {
     return {
       verified: false,
+      onChainVerified: false,
+      binanceDepositVerified: false,
+      paid: false,
+      txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'DUPLICATE_TX_ALREADY_REDEEMED',
       txHash,
@@ -144,10 +190,14 @@ function findDuplicateInRegistry(registry, txHash, orderId) {
   if (orderId && registry.some((e) => e?.orderId && String(e.orderId) === orderId)) {
     return {
       verified: false,
+      onChainVerified: false,
+      binanceDepositVerified: false,
+      paid: false,
+      txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'DUPLICATE_ORDER_ID',
       orderId,
-      message: `Order ID "${orderId}" already has a verified payment recorded.`,
+      message: `Order ID "${orderId}" already has a recorded payment entry.`,
     };
   }
   return null;
@@ -158,7 +208,7 @@ function findDuplicateInRegistry(registry, txHash, orderId) {
  * Eliminates TOCTOU duplicate-claim races across concurrent processes.
  */
 export async function withRegistryLock(recordPath, fn, timeoutMs = 5000) {
-  fs.mkdirSync(path.dirname(recordPath), { recursive: true });
+  ensurePrivateParentDir(path.dirname(recordPath));
   const lockPath = `${recordPath}.lock`;
   const deadline = Date.now() + timeoutMs;
 
@@ -201,16 +251,19 @@ export async function withRegistryLock(recordPath, fn, timeoutMs = 5000) {
 }
 
 export async function recordVerifiedTransactionAtomically(recordPath, entry) {
-  return await withRegistryLock(recordPath, async () => {
-    const registry = readRegistry(recordPath);
+  const safePath = validateRecordPath(recordPath);
+  return await withRegistryLock(safePath, async () => {
+    const registry = readRegistry(safePath);
     const dupe = findDuplicateInRegistry(registry, normalizeTxHash(entry.txHash), entry.orderId || null);
     if (dupe) {
       return dupe;
     }
     const nextRegistry = [...registry, entry];
-    const tmpPath = `${recordPath}.${process.pid}.${Date.now()}.tmp`;
+    const tmpPath = `${safePath}.${process.pid}.${Date.now()}.tmp`;
     fs.writeFileSync(tmpPath, JSON.stringify(nextRegistry, null, 2), { encoding: 'utf8', mode: 0o600 });
-    fs.renameSync(tmpPath, recordPath);
+    fs.chmodSync(tmpPath, 0o600);
+    fs.renameSync(tmpPath, safePath);
+    fs.chmodSync(safePath, 0o600);
     return entry;
   });
 }
@@ -220,7 +273,15 @@ async function main() {
   try {
     opts = parseArgs(process.argv);
   } catch (err) {
-    console.error(JSON.stringify({ verified: false, paymentState: PAYMENT_STATES.FAILED, status: 'INVALID_ARGS', message: err.message }, null, 2));
+    console.error(JSON.stringify({
+      verified: false,
+      onChainVerified: false,
+      paid: false,
+      txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'INVALID_ARGS',
+      message: err.message,
+    }, null, 2));
     process.exitCode = 1;
     return;
   }
@@ -249,10 +310,19 @@ async function main() {
     maxAgeSeconds: opts.maxAgeSeconds,
   });
 
-  let finalOutput = result;
+  let finalOutput = {
+    ...result,
+    paid: false,
+    txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
+  };
+  if (result.verified) {
+    finalOutput.nextStep =
+      'On-chain BSC checks passed (>= 15 confirmations). Do NOT mark Paid yet: confirm Completed/Credited deposit consistency in Binance Deposit History and run "npm run orders -- verify-payment".';
+  }
+
   if (result.verified && opts.recordPath) {
     const entry = {
-      ...result,
+      ...finalOutput,
       ...(opts.orderId ? { orderId: opts.orderId } : {}),
     };
     finalOutput = await recordVerifiedTransactionAtomically(opts.recordPath, entry);
@@ -268,7 +338,15 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) {
   main().catch((err) => {
     const msg = process.env.VITALSSCOUT_DEBUG === '1' ? (err?.stack || err?.message || String(err)) : (err?.message || 'Unexpected error');
-    console.error(JSON.stringify({ verified: false, paymentState: PAYMENT_STATES.FAILED, status: 'ERROR', message: msg }, null, 2));
+    console.error(JSON.stringify({
+      verified: false,
+      onChainVerified: false,
+      paid: false,
+      txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'ERROR',
+      message: msg,
+    }, null, 2));
     process.exitCode = 1;
   });
 }

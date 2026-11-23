@@ -4,14 +4,16 @@ export const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
 export const USDT_DECIMALS = 18;
 export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 export const RECEIVING_WALLET = '0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2';
-export const MIN_CONFIRMATIONS = 5;
+export const MIN_CONFIRMATIONS = 15;
 export const DEFAULT_MAX_TX_AGE_SECONDS = 86400; // 24 hours
+export const CUSTOMER_TX_UNVERIFIED_LABEL = 'Customer-submitted transaction hash — UNVERIFIED.';
 
 export const PAYMENT_STATES = Object.freeze({
   PENDING: 'Pending',
-  CONFIRMED: 'Confirmed',
+  ON_CHAIN_CONFIRMED: 'On-Chain Confirmed (Awaiting Binance Deposit Check)',
   FAILED: 'Failed',
   EXPIRED: 'Expired',
+  MANUAL_REVIEW: 'Manual Review',
 });
 
 export const DEFAULT_BSC_RPCS = [
@@ -199,15 +201,24 @@ async function querySingleRpc(endpoint, normalizedHash, fetchImpl) {
     tx = await rpcRequest(endpoint, 'eth_getTransactionByHash', [normalizedHash], fetchImpl);
   } else if (receipt.blockNumber) {
     block = await rpcRequest(endpoint, 'eth_getBlockByNumber', [receipt.blockNumber, false], fetchImpl);
+    if (
+      block &&
+      block.hash &&
+      receipt.blockHash &&
+      String(block.hash).toLowerCase() !== String(receipt.blockHash).toLowerCase()
+    ) {
+      throw new Error('Block hash mismatch between transaction receipt and block header');
+    }
   }
 
   return { endpoint, receipt, latestBlockHex, tx, block };
 }
 
 /**
- * Independently verify a USDT (BEP20) payment on BNB Smart Chain Mainnet.
- * Returns explicit paymentState: 'Pending' | 'Confirmed' | 'Failed' | 'Expired'.
- * Never marks verified=true unless all on-chain invariants and quorum (when >=2 RPCs) pass.
+ * Independently verify the on-chain BSC (BEP20) portion of a USDT payment.
+ * NOTE: On-chain verification alone NEVER marks an order Paid. Operator must still
+ * confirm uniqueness in the local replay registry and verify the matching deposit
+ * in Binance Deposit History (Completed/Credited + on-chain consistency).
  *
  * @param {object} options
  * @param {string} options.txHash
@@ -233,10 +244,19 @@ export async function verifyUsdtBep20Payment({
   requireQuorum,
   nowMs = Date.now(),
 }) {
+  const baseFailMeta = {
+    verified: false,
+    onChainVerified: false,
+    binanceDepositVerified: false,
+    paid: false,
+    requiresBinanceDepositCheck: true,
+    txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
+  };
+
   const service = USDT_SERVICES[serviceKey];
   if (!service) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_SERVICE',
       message: `Unknown service "${serviceKey}". Expected "audit" ($20.86) or "audit-fix" ($48.86).`,
@@ -246,7 +266,7 @@ export async function verifyUsdtBep20Payment({
   const normalizedHash = normalizeTxHash(txHash);
   if (!normalizedHash) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_TX_HASH',
       message: 'Invalid transaction hash. Enter a 66-character 0x... BNB Smart Chain txHash.',
@@ -255,7 +275,7 @@ export async function verifyUsdtBep20Payment({
 
   if (!Array.isArray(rpcEndpoints) || rpcEndpoints.length === 0 || rpcEndpoints.some((u) => !isAllowedRpcUrl(u))) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_RPC_URL',
       txHash: normalizedHash,
@@ -267,7 +287,7 @@ export async function verifyUsdtBep20Payment({
   const expiresMs = parseTimestampMs(orderExpiresAt);
   if (Number.isNaN(createdMs) || Number.isNaN(expiresMs)) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_TIME_WINDOW',
       txHash: normalizedHash,
@@ -277,11 +297,11 @@ export async function verifyUsdtBep20Payment({
 
   if (typeof fetchImpl !== 'function') {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.PENDING,
       status: 'FETCH_UNAVAILABLE',
       txHash: normalizedHash,
-      message: 'HTTP fetch API is unavailable in this runtime. Verify manually on BscScan before fulfilling.',
+      message: 'HTTP fetch API is unavailable in this runtime. Verify manually on BscScan and Binance Deposit History before marking Paid.',
     };
   }
 
@@ -302,12 +322,12 @@ export async function verifyUsdtBep20Payment({
 
   if (!primary) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.PENDING,
       status: 'RPC_UNAVAILABLE',
       txHash: normalizedHash,
       bscscanUrl,
-      message: `Automated BNB Smart Chain RPC verification is temporarily unavailable (${primaryErrors.join('; ')}). Check manually on BscScan — do not mark paid until confirmed.`,
+      message: `Automated BNB Smart Chain RPC verification is temporarily unavailable (${primaryErrors.join('; ')}). Check manually on BscScan and Binance Deposit History — do not mark Paid until all checks pass.`,
     };
   }
 
@@ -316,29 +336,29 @@ export async function verifyUsdtBep20Payment({
   if (receipt === null) {
     if (tx && tx.blockNumber === null) {
       return {
-        verified: false,
+        ...baseFailMeta,
         paymentState: PAYMENT_STATES.PENDING,
         status: 'PENDING_MEMPOOL',
         txHash: normalizedHash,
         bscscanUrl,
         rpcUsed: endpoint,
-        message: 'Transaction is in the BNB Smart Chain mempool and not yet included in a block. Wait a few seconds and retry.',
+        message: 'Transaction is in the BNB Smart Chain mempool and not yet included in a block. Wait and re-verify.',
       };
     }
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'TX_NOT_FOUND',
       txHash: normalizedHash,
       bscscanUrl,
       rpcUsed: endpoint,
-      message: 'Transaction hash not found on BNB Smart Chain (BEP20). Confirm you sent on BSC (Chain ID 56), not ERC20 or TRC20.',
+      message: 'Transaction hash not found on BNB Smart Chain (BEP20). Confirm sender used BSC (Chain ID 56), not ERC20 or TRC20.',
     };
   }
 
   if (receipt.transactionHash && String(receipt.transactionHash).toLowerCase() !== normalizedHash) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'RECEIPT_HASH_MISMATCH',
       txHash: normalizedHash,
@@ -350,7 +370,7 @@ export async function verifyUsdtBep20Payment({
 
   if (String(receipt.status).toLowerCase() !== '0x1') {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'TX_REVERTED',
       txHash: normalizedHash,
@@ -363,7 +383,7 @@ export async function verifyUsdtBep20Payment({
   const { senders, receivedBaseUnits, matchingLogs } = extractUsdtTransfers(receipt);
   if (matchingLogs === 0) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'NO_MATCHING_USDT_TRANSFER',
       txHash: normalizedHash,
@@ -382,7 +402,7 @@ export async function verifyUsdtBep20Payment({
 
   if (receivedBaseUnits < service.expectedBaseUnits) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'INSUFFICIENT_AMOUNT',
       txHash: normalizedHash,
@@ -393,7 +413,24 @@ export async function verifyUsdtBep20Payment({
       receivedBaseUnits: receivedBaseUnits.toString(),
       receivedUsdt,
       expectedUsdt: service.expectedUsdt,
-      message: `Insufficient amount: received ${receivedUsdt} USDT, expected at least ${service.expectedUsdt} USDT for ${service.name}.`,
+      message: `Insufficient amount: received ${receivedUsdt} USDT, expected exact ${service.expectedUsdt} USDT for ${service.name}.`,
+    };
+  }
+
+  if (receivedBaseUnits > service.expectedBaseUnits) {
+    return {
+      ...baseFailMeta,
+      paymentState: PAYMENT_STATES.MANUAL_REVIEW,
+      status: 'OVERPAID_AMOUNT',
+      txHash: normalizedHash,
+      bscscanUrl,
+      rpcUsed: endpoint,
+      blockNumber: txBlock,
+      confirmations,
+      receivedBaseUnits: receivedBaseUnits.toString(),
+      receivedUsdt,
+      expectedUsdt: service.expectedUsdt,
+      message: `Amount mismatch (overpaid): received ${receivedUsdt} USDT instead of exact ${service.expectedUsdt} USDT for ${service.name}. Flagged for Manual Review.`,
     };
   }
 
@@ -403,7 +440,7 @@ export async function verifyUsdtBep20Payment({
 
   if (blockTimestampMs === null && (createdMs !== null || expiresMs !== null || maxAgeSeconds !== null)) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.FAILED,
       status: 'BLOCK_TIMESTAMP_UNAVAILABLE',
       txHash: normalizedHash,
@@ -417,7 +454,7 @@ export async function verifyUsdtBep20Payment({
   if (blockTimestampMs !== null) {
     if (createdMs !== null && blockTimestampMs < createdMs - 60000) {
       return {
-        verified: false,
+        ...baseFailMeta,
         paymentState: PAYMENT_STATES.FAILED,
         status: 'TX_PRE_ORDER',
         txHash: normalizedHash,
@@ -425,7 +462,7 @@ export async function verifyUsdtBep20Payment({
         rpcUsed: endpoint,
         blockNumber: txBlock,
         blockTimestamp: blockTimestampIso,
-        message: 'Transaction occurred before the order window started (possible old transaction replay).',
+        message: 'Transaction occurred before payment instructions were issued (possible old transaction replay).',
       };
     }
 
@@ -434,7 +471,7 @@ export async function verifyUsdtBep20Payment({
       (maxAgeSeconds !== null && nowMs - blockTimestampMs > maxAgeSeconds * 1000)
     ) {
       return {
-        verified: false,
+        ...baseFailMeta,
         paymentState: PAYMENT_STATES.EXPIRED,
         status: 'PAYMENT_EXPIRED',
         txHash: normalizedHash,
@@ -446,14 +483,14 @@ export async function verifyUsdtBep20Payment({
         receivedBaseUnits: receivedBaseUnits.toString(),
         receivedUsdt,
         expectedUsdt: service.expectedUsdt,
-        message: 'Payment window expired (transaction timestamp is outside the valid checkout window). Submit your txHash with your brief for operator review.',
+        message: 'Payment window expired (transaction timestamp is outside the valid payment window). Route to Manual Review.',
       };
     }
   }
 
   if (confirmations < minConfirmations) {
     return {
-      verified: false,
+      ...baseFailMeta,
       paymentState: PAYMENT_STATES.PENDING,
       status: 'PENDING_CONFIRMATIONS',
       txHash: normalizedHash,
@@ -466,7 +503,7 @@ export async function verifyUsdtBep20Payment({
       receivedBaseUnits: receivedBaseUnits.toString(),
       receivedUsdt,
       expectedUsdt: service.expectedUsdt,
-      message: `Payment detected (${receivedUsdt} USDT) at block ${txBlock}, currently ${confirmations}/${minConfirmations} confirmations. Retry in a few seconds.`,
+      message: `Payment detected (${receivedUsdt} USDT) at block ${txBlock}, currently ${confirmations}/${minConfirmations} confirmations. Wait until at least ${minConfirmations} confirmations.`,
     };
   }
 
@@ -487,7 +524,7 @@ export async function verifyUsdtBep20Payment({
 
     if (!secondaryData) {
       return {
-        verified: false,
+        ...baseFailMeta,
         paymentState: PAYMENT_STATES.PENDING,
         status: 'RPC_QUORUM_UNAVAILABLE',
         txHash: normalizedHash,
@@ -505,6 +542,8 @@ export async function verifyUsdtBep20Payment({
 
     const secReceipt = secondaryData.receipt;
     const secBlock = secReceipt?.blockNumber ? Number.parseInt(secReceipt.blockNumber, 16) : null;
+    const secBlockHash = secReceipt?.blockHash ? String(secReceipt.blockHash).toLowerCase() : null;
+    const priBlockHash = receipt?.blockHash ? String(receipt.blockHash).toLowerCase() : null;
     const secTransfers = secReceipt ? extractUsdtTransfers(secReceipt) : { receivedBaseUnits: 0n, matchingLogs: 0 };
     const secHashMismatch = secReceipt?.transactionHash && String(secReceipt.transactionHash).toLowerCase() !== normalizedHash;
 
@@ -513,18 +552,19 @@ export async function verifyUsdtBep20Payment({
       secHashMismatch ||
       String(secReceipt.status).toLowerCase() !== '0x1' ||
       secBlock !== txBlock ||
+      (priBlockHash && secBlockHash && secBlockHash !== priBlockHash) ||
       secTransfers.matchingLogs === 0 ||
-      secTransfers.receivedBaseUnits < service.expectedBaseUnits
+      secTransfers.receivedBaseUnits !== receivedBaseUnits
     ) {
       return {
-        verified: false,
-        paymentState: PAYMENT_STATES.FAILED,
+        ...baseFailMeta,
+        paymentState: PAYMENT_STATES.MANUAL_REVIEW,
         status: 'RPC_CONSENSUS_MISMATCH',
         txHash: normalizedHash,
         bscscanUrl,
         rpcUsed: endpoint,
         secondaryRpc: secondaryData.endpoint,
-        message: 'Secondary BNB Smart Chain RPC node disagreed with primary verification result. Rejecting pending manual inspection.',
+        message: 'Secondary BNB Smart Chain RPC node disagreed with primary verification result. Flagged for Manual Review.',
       };
     }
 
@@ -533,8 +573,21 @@ export async function verifyUsdtBep20Payment({
 
   return {
     verified: true,
-    paymentState: PAYMENT_STATES.CONFIRMED,
-    status: 'CONFIRMED',
+    onChainVerified: true,
+    binanceDepositVerified: false,
+    paid: false,
+    requiresBinanceDepositCheck: true,
+    paymentState: PAYMENT_STATES.ON_CHAIN_CONFIRMED,
+    status: 'ON_CHAIN_CONFIRMED_AWAITING_BINANCE',
+    txSubmissionLabel: CUSTOMER_TX_UNVERIFIED_LABEL,
+    checks: {
+      chainId56: true,
+      usdtTokenContract: true,
+      depositRecipientAddress: true,
+      exactRequiredNetAmount: true,
+      receiptStatusSuccess: true,
+      min15Confirmations: true,
+    },
     txHash: normalizedHash,
     serviceKey: service.key,
     serviceName: service.name,
@@ -555,6 +608,6 @@ export async function verifyUsdtBep20Payment({
     quorumVerified: useQuorum,
     quorumRpcs,
     verifiedAt: new Date(nowMs).toISOString(),
-    message: `Confirmed ${receivedUsdt} USDT (BEP20) on BNB Smart Chain block #${txBlock} (${confirmations} confirmations${useQuorum ? ', 2-RPC quorum' : ''}).`,
+    message: `On-chain BSC checks passed for ${receivedUsdt} USDT (BEP20) at block #${txBlock} (${confirmations} confirmations${useQuorum ? ', 2-RPC quorum' : ''}). NOT marked Paid until verified unique in local replay registry and matched as Completed/Credited in Binance Deposit History.`,
   };
 }

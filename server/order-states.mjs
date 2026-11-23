@@ -46,13 +46,9 @@ export const ALLOWED_MANUAL_RESOLUTIONS = Object.freeze([
 ]);
 
 /**
- * Returns true if automatic fulfillment/delivery can run once (and only once) for this order.
- * @param {object} order
- * @param {boolean} autoFulfillmentEnabled
+ * Automatic fulfillment is permanently disabled under the manual-payment policy.
+ * @returns {false}
  */
-export function canTriggerDelivery(order, autoFulfillmentEnabled) {
-  if (!autoFulfillmentEnabled || !order) {
-    return false;
-  }
-  return order.state === ORDER_STATES.PAID && order.deliveryTriggered !== true;
+export function canTriggerDelivery() {
+  return false;
 }

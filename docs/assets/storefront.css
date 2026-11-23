@@ -14,6 +14,7 @@
   --warn-ink: #92400e;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -245,82 +246,67 @@ pre.brief-preview {
 }
 .step-card h3 { margin: 0 0 4px; font-size: 16px; }
 .step-card p { margin: 0; font-size: 14px; color: var(--muted); }
-.usdt-panel {
+.manual-panel {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 20px;
   margin: 18px 0;
 }
-.usdt-panel h3 { margin: 0 0 8px; font-size: 18px; }
+.manual-panel h3 { margin: 0 0 10px; font-size: 18px; }
 .network-warning {
   background: #fef3c7;
   color: #78350f;
   border: 1px solid #f59e0b;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
-.usdt-grid {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 20px;
-  align-items: start;
-  margin-bottom: 16px;
+.privacy-warning {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 10px;
 }
-@media (max-width: 680px) {
-  .usdt-grid { grid-template-columns: 1fr; }
-}
-.qr-box {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-  text-align: center;
-  width: 220px;
-}
-.qr-box img { display: block; width: 200px; height: 200px; }
-.usdt-meta { margin: 0; padding: 0; list-style: none; font-size: 14px; }
-.usdt-meta li { margin-bottom: 10px; word-break: break-word; }
-.usdt-meta code {
+.workflow-list { margin: 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.workflow-list li { margin-bottom: 10px; word-break: break-word; }
+.workflow-list code {
   display: inline-block;
   background: #f1f5f9;
   color: #0f172a;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   font-size: 13px;
   word-break: break-all;
 }
-.usdt-meta a { color: var(--emerald-hover); font-weight: 600; display: inline-flex; align-items: center; min-height: 28px; }
-.wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
-.verify-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
-.verify-row input[type="text"] {
-  flex: 1 1 300px;
-  min-height: 48px;
-  padding: 10px 12px;
-  border: 1px solid #475569;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--ink);
+.workflow-list a, .manual-panel a, .contact-channel-box a { color: var(--emerald-hover); font-weight: 600; display: inline-flex; align-items: center; min-height: 28px; }
+.contact-channel-box {
+  background: var(--emerald-soft);
+  border: 1px solid #6ee7b7;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 0 0 14px;
+  color: #064e3b;
+}
+.contact-channel-lead { margin: 0 0 6px; font-size: 15px; }
+.contact-channel-lead code {
+  display: inline-block;
   background: #ffffff;
-}
-.verify-box {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 8px;
+  color: #064e3b;
+  border: 1px solid #047857;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
   font-size: 14px;
-  background: #f1f5f9;
-  color: #0f172a;
-  border: 1px solid var(--border);
+  user-select: all;
 }
-.verify-box.is-verified { background: var(--emerald-soft); color: #064e3b; border-color: #34d399; font-weight: 600; }
-.verify-box.is-error { background: #fee2e2; color: #7f1d1d; border-color: #f87171; font-weight: 600; }
-.verify-box.is-pending { background: #fef3c7; color: #78350f; border-color: #f59e0b; font-weight: 600; }
-.verify-box.is-expired { background: #ffedd5; color: #7c2d12; border-color: #fb923c; font-weight: 600; }
-.verify-box a { color: inherit; font-weight: 700; display: inline-flex; align-items: center; min-height: 28px; }
+.contact-channel-sub { margin: 0; font-size: 13px; color: var(--muted); }
 details {
   background: #ffffff;
   border: 1px solid var(--border);

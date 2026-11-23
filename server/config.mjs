@@ -24,9 +24,7 @@ export const DEFAULT_INVOICE_TTL_SECONDS = 1800; // 30 minutes
 export const DEFAULT_RECV_WINDOW_MS = 5000;
 export const DEFAULT_BLOCK_SCAN_LOOKBACK = 400; // ~20 minutes on ~0.75-3s BSC blocks, <= 2000 chunk cap
 export const MAX_ETH_GET_LOGS_BLOCK_SPAN = 1500;
-export const MIN_CLOCK_SKEW_TOLERANCE_MS = 120_000; // 2 minutes tolerance around invoice creation
-export const MAX_CONCURRENT_DISCOUNT_STEPS = 99; // -0.0001 to -0.0099 USDT micro-discount slots
-export const BASE_UNITS_PER_TENTH_MILLI_USDT = 10n ** 14n; // 0.0001 USDT in 18-decimal base units
+export const MIN_CLOCK_SKEW_TOLERANCE_MS = 120_000; // 2 minutes tolerance around order creation
 
 export const BINANCE_API_BASE_URL = 'https://api.binance.com';
 export const ETHERSCAN_V2_API_BASE_URL = 'https://api.etherscan.io/v2/api';
@@ -108,7 +106,13 @@ export function loadRuntimeConfig(env = process.env) {
   const binanceEnabled = Boolean(binanceApiKey && binanceApiSecret);
   const bscscanEnabled = Boolean(bscscanApiKey);
   const requestedAutoFulfillment = isTruthyEnv(env.VITALS_AUTO_FULFILLMENT_ENABLED);
-  const autoFulfillmentEnabled = Boolean(requestedAutoFulfillment && binanceEnabled);
+  // Policy lock: automatic fulfillment must remain permanently disabled during manual workflow.
+  const autoFulfillmentEnabled = false;
+
+  const host = String(env.VITALS_PAYMENT_HOST || '127.0.0.1').trim() || '127.0.0.1';
+  if (!['127.0.0.1', '::1', 'localhost'].includes(host)) {
+    throw new Error(`Refusing non-loopback VITALS_PAYMENT_HOST "${host}"; local loopback only.`);
+  }
 
   const receivingAddress = String(env.VITALS_RECEIVING_ADDRESS || RECEIVING_DEPOSIT_ADDRESS).trim().toLowerCase();
   if (receivingAddress !== RECEIVING_DEPOSIT_ADDRESS.toLowerCase()) {
@@ -138,9 +142,10 @@ export function loadRuntimeConfig(env = process.env) {
     invoiceTtlSeconds: parsePositiveInt(env.VITALS_INVOICE_TTL_SECONDS, DEFAULT_INVOICE_TTL_SECONDS),
     recvWindowMs: parsePositiveInt(env.BINANCE_RECV_WINDOW_MS, DEFAULT_RECV_WINDOW_MS),
     autoFulfillmentEnabled,
+    autoFulfillmentBlockedByPolicy: Boolean(requestedAutoFulfillment),
     autoFulfillmentRequestedWithoutBinance: Boolean(requestedAutoFulfillment && !binanceEnabled),
     adminToken,
-    host: String(env.VITALS_PAYMENT_HOST || '127.0.0.1').trim() || '127.0.0.1',
+    host,
     port: parsePositiveInt(env.PORT || env.VITALS_PAYMENT_PORT, 8787),
     storeFilePath: path.resolve(
       String(

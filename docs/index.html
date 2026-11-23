@@ -287,6 +287,81 @@
     }
     .step-card h3 { margin: 0 0 4px; font-size: 16px; }
     .step-card p { margin: 0; font-size: 14px; color: var(--muted); }
+    .usdt-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 18px 0;
+    }
+    .usdt-panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .network-warning {
+      background: #fef3c7;
+      color: #78350f;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .usdt-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 680px) {
+      .usdt-grid { grid-template-columns: 1fr; }
+    }
+    .qr-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      width: 220px;
+    }
+    .qr-box img { display: block; width: 200px; height: 200px; }
+    .usdt-meta { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+    .usdt-meta li { margin-bottom: 10px; word-break: break-word; }
+    .usdt-meta code {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .usdt-meta a { color: var(--emerald-hover); font-weight: 600; display: inline-flex; align-items: center; min-height: 28px; }
+    .wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+    .verify-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+    .verify-row input[type="text"] {
+      flex: 1 1 300px;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--ink);
+      background: #ffffff;
+    }
+    .verify-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid var(--border);
+    }
+    .verify-box.is-verified { background: var(--emerald-soft); color: #064e3b; border-color: #34d399; font-weight: 600; }
+    .verify-box.is-error { background: #fee2e2; color: #7f1d1d; border-color: #f87171; font-weight: 600; }
+    .verify-box.is-pending { background: #fef3c7; color: #78350f; border-color: #f59e0b; font-weight: 600; }
+    .verify-box a { color: inherit; font-weight: 700; display: inline-flex; align-items: center; min-height: 28px; }
     details {
       background: #ffffff;
       border: 1px solid var(--border);
@@ -488,8 +563,8 @@
           </li>
           <li class="step-card">
             <span class="step-num">Step 3</span>
-            <h3>One-Time Payoneer Invoice</h3>
-            <p>Receive scope confirmation in 24h plus a one-time Payoneer USD invoice (US ACH, Visa/Mastercard, or wire).</p>
+            <h3>Pay with USDT or Payoneer</h3>
+            <p>Pay immediately via verified USDT (BEP20) below or request a one-time Payoneer USD invoice.</p>
           </li>
           <li class="step-card">
             <span class="step-num">Step 4</span>
@@ -542,6 +617,46 @@
             <strong>Selected Service:</strong> Website Audit + Fix — <strong>$48.86 USD</strong> (One-time payment, 3–5 business days, up to 5 templates + code fixes &amp; re-audit).
           </div>
 
+          <section class="usdt-panel" id="usdt-checkout-panel" aria-labelledby="usdt-checkout-heading">
+            <h3 id="usdt-checkout-heading">Direct One-Time Checkout — Pay with USDT (BNB Smart Chain BEP20)</h3>
+            <p id="usdt-free-note" hidden>Free 1-Page Snapshot requires no payment — copy your brief and submit it via LinkedIn, GitHub Issue, or GitHub Discussions below.</p>
+            <div id="usdt-paid-details">
+              <div class="network-warning" role="note">
+                Send ONLY <strong>USDT on BNB Smart Chain (BEP20)</strong>. Transfers sent on ERC20, TRC20, or other networks cannot be verified and may be lost.
+              </div>
+              <div class="usdt-grid">
+                <div class="qr-box">
+                  <img src="./assets/usdt-bep20-qr.svg" alt="QR code for VitalsScout USDT BEP20 receiving wallet 0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9" width="200" height="200" />
+                </div>
+                <ul class="usdt-meta">
+                  <li><strong>Asset:</strong> USDT (BEP20 &mdash; Tether USD)</li>
+                  <li><strong>Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
+                  <li><strong>Exact Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong> (one-time)</li>
+                  <li><strong>Official USDT BEP20 Contract:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
+                  <li>
+                    <strong>Receiving Wallet Address:</strong><br />
+                    <code id="usdt-wallet-address">0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code>
+                    <div class="wallet-actions">
+                      <button type="button" class="btn btn-secondary-light" id="copy-wallet-btn">Copy Wallet Address</button>
+                      <span id="copy-wallet-status" class="status-note" aria-live="polite"></span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <label class="field-label" for="usdt-tx-hash">After sending, paste your BNB Smart Chain Transaction Hash (0x...)</label>
+                <div class="verify-row">
+                  <input id="usdt-tx-hash" type="text" placeholder="0x..." autocomplete="off" spellcheck="false" />
+                  <button type="button" class="btn btn-primary" id="verify-usdt-btn">Verify Payment on BNB Smart Chain</button>
+                </div>
+                <div id="usdt-verify-status" class="verify-box" aria-live="polite">
+                  No transaction verified yet. Verification queries live BNB Smart Chain Mainnet RPC nodes (Chain ID 56) for &ge; 5 confirmations on the official USDT BEP20 contract. Prefer traditional billing? Leave this blank and request a one-time Payoneer USD invoice when submitting your brief.
+                </div>
+              </div>
+            </div>
+          </section>
+
           <label class="field-label" for="brief-output">Generated Request Brief (Preview)</label>
           <pre class="brief-preview" id="brief-output"></pre>
 
@@ -571,7 +686,7 @@
             </details>
             <details>
               <summary>How do international payments work?</summary>
-              <p>B2B clients receive an official one-time <strong>Payoneer Request a Payment</strong> invoice supporting US ACH bank debit, credit/debit cards, or local bank transfer (plus Fiverr checkout once linked). Work starts once payment is verified.</p>
+              <p>Pay immediately via <strong>USDT (BNB Smart Chain — BEP20)</strong> directly on this page with automated on-chain transaction verification, or request an official one-time <strong>Payoneer Request a Payment</strong> USD invoice (US ACH bank debit, Visa/Mastercard, or local bank transfer) — plus Fiverr checkout once linked. Work starts once payment is verified.</p>
             </details>
           </div>
           <div>
@@ -606,14 +721,16 @@
     </div>
   </footer>
 
-  <script>
+  <script type="module">
+    import { RECEIVING_WALLET, verifyUsdtBep20Payment } from './assets/usdt-verifier.js';
+
     (function () {
       var BUSINESS_EMAIL = '';
       var FIVERR_URL = '';
       var TIER_MAP = {
-        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', sla: 'One-time free diagnostic, within 24 hours, 1 URL' },
-        audit: { label: 'Website Diagnostic Audit', price: '$20.86 USD', sla: 'One-time payment, 48 hours, up to 5 templates' },
-        'audit-fix': { label: 'Website Audit + Fix', price: '$48.86 USD', sla: 'One-time payment, 3–5 business days, up to 5 templates + code fixes & verification re-audit' }
+        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', usdt: null, sla: 'One-time free diagnostic, within 24 hours, 1 URL' },
+        audit: { label: 'Website Diagnostic Audit', price: '$20.86 USD', usdt: '20.86', sla: 'One-time payment, 48 hours, up to 5 templates' },
+        'audit-fix': { label: 'Website Audit + Fix', price: '$48.86 USD', usdt: '48.86', sla: 'One-time payment, 3–5 business days, up to 5 templates + code fixes & verification re-audit' }
       };
 
       var urlInput = document.getElementById('site-url');
@@ -626,7 +743,19 @@
       var copyBtn = document.getElementById('copy-brief-btn');
       var copyStatus = document.getElementById('copy-status');
       var ctaActions = document.getElementById('cta-actions');
+
+      var usdtFreeNote = document.getElementById('usdt-free-note');
+      var usdtPaidDetails = document.getElementById('usdt-paid-details');
+      var usdtAmountDue = document.getElementById('usdt-amount-due');
+      var copyWalletBtn = document.getElementById('copy-wallet-btn');
+      var copyWalletStatus = document.getElementById('copy-wallet-status');
+      var txHashInput = document.getElementById('usdt-tx-hash');
+      var verifyUsdtBtn = document.getElementById('verify-usdt-btn');
+      var verifyStatusEl = document.getElementById('usdt-verify-status');
+
       var copyResetTimer = null;
+      var walletResetTimer = null;
+      var verifiedPayment = null;
 
       if (BUSINESS_EMAIL && ctaActions) {
         var mailLink = document.createElement('a');
@@ -648,8 +777,34 @@
         ctaActions.appendChild(fiverrLink);
       }
 
+      function setVerifyState(type, htmlContent) {
+        verifyStatusEl.className = 'verify-box' + (type ? ' ' + type : '');
+        verifyStatusEl.innerHTML = htmlContent;
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function syncUsdtPanel(tier) {
+        if (!tier.usdt) {
+          usdtFreeNote.hidden = false;
+          usdtPaidDetails.hidden = true;
+        } else {
+          usdtFreeNote.hidden = true;
+          usdtPaidDetails.hidden = false;
+          usdtAmountDue.textContent = tier.usdt + ' USDT';
+        }
+        if (verifiedPayment && verifiedPayment.serviceKey !== tierSelect.value) {
+          verifiedPayment = null;
+          setVerifyState('', 'Service changed — re-verify transaction hash for the selected amount before submitting.');
+        }
+      }
+
       function updateBrief() {
         var tier = TIER_MAP[tierSelect.value] || TIER_MAP['audit-fix'];
+        syncUsdtPanel(tier);
+
         var url = (urlInput.value || '').trim() || 'https://yourstore.com';
         var platform = platformSelect.value;
         var focuses = Array.from(document.querySelectorAll('input[name="focus"]:checked')).map(function (c) { return c.value; });
@@ -657,7 +812,7 @@
 
         summaryEl.innerHTML = '<strong>Selected Service:</strong> ' + tier.label + ' — <strong>' + tier.price + '</strong> (' + tier.sla + ').';
 
-        var brief = [
+        var lines = [
           '## VitalsScout Audit Request',
           '- Website URL: ' + url,
           '- Platform: ' + platform,
@@ -665,8 +820,24 @@
           '- Terms & SLA: ' + tier.sla,
           '- Focus Areas: ' + (focuses.length ? focuses.join('; ') : 'General diagnostic'),
           '- Notes: ' + notes
-        ].join('\n');
+        ];
 
+        if (verifiedPayment && verifiedPayment.verified) {
+          lines.push(
+            '- Verified Payment: ' +
+              verifiedPayment.receivedUsdt +
+              ' USDT (BEP20) | Block #' +
+              verifiedPayment.blockNumber +
+              ' (' +
+              verifiedPayment.confirmations +
+              ' confirmations) | Tx: ' +
+              verifiedPayment.txHash +
+              ' | BscScan: ' +
+              verifiedPayment.bscscanUrl
+          );
+        }
+
+        var brief = lines.join('\n');
         outputEl.textContent = brief;
         var issueTitle = encodeURIComponent('[Audit Request] ' + url + ' (' + tier.price + ')');
         var issueBody = encodeURIComponent(brief + '\n\n(Please remove or withhold any sensitive credentials before submitting.)');
@@ -678,32 +849,108 @@
         }
       }
 
-      function markCopied() {
-        copyBtn.textContent = 'Brief Copied!';
-        copyStatus.textContent = 'Request brief copied to clipboard — paste it in a LinkedIn message to Ahmed or a GitHub Issue.';
-        if (copyResetTimer) clearTimeout(copyResetTimer);
-        copyResetTimer = setTimeout(function () {
-          copyBtn.textContent = 'Copy Request Brief';
-        }, 2500);
-      }
-
-      function fallbackCopy(text) {
-        var tmp = document.createElement('textarea');
-        tmp.value = text;
-        tmp.setAttribute('readonly', '');
-        tmp.style.position = 'absolute';
-        tmp.style.left = '-9999px';
-        document.body.appendChild(tmp);
-        tmp.select();
-        var ok = false;
-        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-        document.body.removeChild(tmp);
-        if (ok) {
-          markCopied();
+      function copyWithFallback(text, onSuccess, onFail) {
+        var doFallback = function () {
+          var tmp = document.createElement('textarea');
+          tmp.value = text;
+          tmp.setAttribute('readonly', '');
+          tmp.style.position = 'absolute';
+          tmp.style.left = '-9999px';
+          document.body.appendChild(tmp);
+          tmp.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          document.body.removeChild(tmp);
+          if (ok) onSuccess();
+          else onFail();
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onSuccess, doFallback);
         } else {
-          copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
+          doFallback();
         }
       }
+
+      copyBtn.addEventListener('click', function () {
+        copyWithFallback(
+          outputEl.textContent,
+          function () {
+            copyBtn.textContent = 'Brief Copied!';
+            copyStatus.textContent = 'Request brief copied to clipboard — paste it in a LinkedIn message to Ahmed or a GitHub Issue.';
+            if (copyResetTimer) clearTimeout(copyResetTimer);
+            copyResetTimer = setTimeout(function () {
+              copyBtn.textContent = 'Copy Request Brief';
+            }, 2500);
+          },
+          function () {
+            copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
+          }
+        );
+      });
+
+      copyWalletBtn.addEventListener('click', function () {
+        copyWithFallback(
+          RECEIVING_WALLET,
+          function () {
+            copyWalletBtn.textContent = 'Address Copied!';
+            copyWalletStatus.textContent = 'USDT (BEP20) wallet address copied.';
+            if (walletResetTimer) clearTimeout(walletResetTimer);
+            walletResetTimer = setTimeout(function () {
+              copyWalletBtn.textContent = 'Copy Wallet Address';
+            }, 2500);
+          },
+          function () {
+            copyWalletStatus.textContent = 'Copy blocked; select the wallet address above manually.';
+          }
+        );
+      });
+
+      verifyUsdtBtn.addEventListener('click', async function () {
+        var serviceKey = tierSelect.value;
+        if (serviceKey !== 'audit' && serviceKey !== 'audit-fix') {
+          setVerifyState('is-error', 'Select Website Diagnostic Audit ($20.86) or Website Audit + Fix ($48.86) to verify payment.');
+          return;
+        }
+        var txHash = (txHashInput.value || '').trim();
+        verifiedPayment = null;
+        updateBrief();
+
+        verifyUsdtBtn.disabled = true;
+        verifyUsdtBtn.textContent = 'Verifying on BSC...';
+        setVerifyState('is-pending', 'Querying BNB Smart Chain Mainnet RPC nodes...');
+
+        try {
+          var result = await verifyUsdtBep20Payment({ txHash: txHash, serviceKey: serviceKey });
+          if (result.verified) {
+            verifiedPayment = result;
+            setVerifyState(
+              'is-verified',
+              'Verified on BNB Smart Chain! Received <strong>' +
+                escapeHtml(result.receivedUsdt) +
+                ' USDT</strong> at block #' +
+                escapeHtml(result.blockNumber) +
+                ' (' +
+                escapeHtml(result.confirmations) +
+                ' confirmations). <a href="' +
+                escapeHtml(result.bscscanUrl) +
+                '" target="_blank" rel="noopener">View on BscScan</a> — Your verified tx is now attached to the brief below.'
+            );
+            updateBrief();
+          } else {
+            var pendingStates = ['PENDING_MEMPOOL', 'PENDING_CONFIRMATIONS'];
+            var cls = pendingStates.indexOf(result.status) >= 0 ? 'is-pending' : 'is-error';
+            var linkHtml = result.bscscanUrl
+              ? ' <a href="' + escapeHtml(result.bscscanUrl) + '" target="_blank" rel="noopener">Check BscScan</a>'
+              : '';
+            setVerifyState(cls, escapeHtml(result.message) + linkHtml);
+          }
+        } catch (err) {
+          setVerifyState('is-error', 'Verification failed: ' + escapeHtml(err && err.message ? err.message : String(err)));
+        } finally {
+          verifyUsdtBtn.disabled = false;
+          verifyUsdtBtn.textContent = 'Verify Payment on BNB Smart Chain';
+        }
+      });
 
       document.querySelectorAll('[data-select-tier]').forEach(function (el) {
         el.addEventListener('click', function () {
@@ -718,15 +965,6 @@
       });
       document.querySelectorAll('input[name="focus"]').forEach(function (el) {
         el.addEventListener('change', updateBrief);
-      });
-
-      copyBtn.addEventListener('click', function () {
-        var text = outputEl.textContent;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(markCopied, function () { fallbackCopy(text); });
-        } else {
-          fallbackCopy(text);
-        }
       });
 
       updateBrief();

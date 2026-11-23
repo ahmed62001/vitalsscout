@@ -8,7 +8,8 @@
   },
   "scripts": {
     "audit": "node ./cli/vitalsscout.mjs",
-    "test": "node ./test/vitalsscout.test.mjs",
+    "verify-usdt": "node ./cli/verify-usdt-payment.mjs",
+    "test": "node ./test/usdt-verifier.test.mjs && node ./test/vitalsscout.test.mjs",
     "build-samples": "node ./scripts/build-samples.mjs"
   },
   "keywords": [
@@ -29,6 +30,7 @@
   "dependencies": {
     "axe-core": "^4.10.2",
     "lighthouse": "^12.6.0",
-    "puppeteer-core": "^24.4.0"
+    "puppeteer-core": "^24.4.0",
+    "qrcode": "^1.5.4"
   }
 }

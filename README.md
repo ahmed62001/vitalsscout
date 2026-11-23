@@ -43,15 +43,18 @@ node ./cli/vitalsscout.mjs https://example.com
 # Custom output folder and filename prefix
 node ./cli/vitalsscout.mjs https://example.com --out ./reports --slug example-home
 
-# Run automated local fixture test suite
+# Run automated test suite (USDT verifier + audit engine)
 npm test
+
+# Independently verify a one-time USDT (BEP20) payment on BNB Smart Chain
+npm run verify-usdt -- <txHash> --service audit-fix
 ```
 
 ---
 
 ## Need a One-Time Audit or Code Repair?
 
-If you run a Shopify, WooCommerce, Webflow, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend fixes (strictly one-time payment — zero subscriptions):
+If you run a Shopify, WooCommerce, Webflow, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend fixes (strictly one-time payment — zero subscriptions; pay via verified USDT BEP20 on BNB Smart Chain or Payoneer USD invoice):
 
 - **Free 1-Page Diagnostic Snapshot ($0):** [Open an Audit Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) or visit the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
 - **Website Diagnostic Audit ($20.86 USD one-time, 48h):** Performance analysis, Core Web Vitals assessment, technical SEO inspection, WCAG 2.2 AA checks, and actionable recommendations across up to 5 templates

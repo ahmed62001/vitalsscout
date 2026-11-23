@@ -10,12 +10,12 @@ labels: audit-request
 - **Platform / Stack:** (Shopify / WooCommerce / Next.js / Webflow / Custom)
 - **One-Time Service Requested:** (Free 1-Page Snapshot $0 / Website Diagnostic Audit 20.86 USDT / Website Audit + Fix 48.86 USDT)
 
-## Payment Verification (USDT BEP20 on BNB Smart Chain ONLY — For Paid Services)
-- **Asset & Network:** USDT on BNB Smart Chain (BEP20, Chain ID 56) — only accepted payment method
+## Payment Verification (USDT on BSC — BNB Smart Chain BEP20 ONLY — For Paid Services)
+- **Asset & Network:** `USDT` on `BSC — BNB Smart Chain (BEP20, Chain ID 56)` (only accepted payment method)
 - **Official USDT Contract:** `0x55d398326f99059fF775485246999027B3197955`
-- **Receiving Wallet:** `0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9`
+- **Binance BSC Deposit Address:** `0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2`
 - **BNB Smart Chain Transaction Hash (`0x...`):** 
-- *(Orders remain Pending until independently confirmed on-chain; never post private keys, seed phrases, or passwords here.)*
+- *(Orders remain Pending until independently confirmed on-chain AND matched by TxID in Binance Deposit History; never post private keys, seed phrases, or passwords here.)*
 
 ## Primary Goal
 - [ ] Improve mobile Core Web Vitals (LCP / CLS / TBT)

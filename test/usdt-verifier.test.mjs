@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
 import {
   BSC_CHAIN_ID_HEX,
@@ -13,6 +14,8 @@ import {
   verifyUsdtBep20Payment,
 } from '../docs/assets/usdt-verifier.js';
 
+const require = createRequire(import.meta.url);
+const QRCode = require('qrcode');
 const execFileAsync = promisify(execFile);
 
 const SAMPLE_TX = '0x' + 'a1'.repeat(32);
@@ -175,9 +178,12 @@ async function runTests() {
       receipt: { status: '0x1', blockNumber: '0x' + (996).toString(16), logs: [makeTransferLog({ amountBaseUnits: 20860000000000000000n })] },
     }),
   });
+  assert.equal(RECEIVING_WALLET, '0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2');
   assert.equal(r9a.verified, true);
   assert.equal(r9a.paymentState, PAYMENT_STATES.CONFIRMED);
   assert.equal(r9a.status, 'CONFIRMED');
+  assert.equal(r9a.networkDisplayName, 'BSC');
+  assert.equal(r9a.recipient, '0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2');
   assert.equal(r9a.quorumVerified, true);
   assert.equal(r9a.receivedUsdt, '20.86');
   assert.equal(r9a.confirmations, 5);
@@ -224,13 +230,20 @@ async function runTests() {
   assert.equal(r11.paymentState, PAYMENT_STATES.FAILED);
   assert.equal(r11.status, 'TX_NOT_FOUND', `Expected TX_NOT_FOUND from live BSC RPC, got ${r11.status}: ${r11.message}`);
 
-  // 12. Verify static QR SVG file exists, is valid <svg>, and < 15 KB
+  // 12. Verify static QR SVG file exists, matches exact new Binance BSC address SVG, and < 15 KB
   const qrPath = path.resolve('./docs/assets/usdt-bep20-qr.svg');
   assert.ok(fs.existsSync(qrPath), 'Missing docs/assets/usdt-bep20-qr.svg');
   const qrSize = fs.statSync(qrPath).size;
   const qrSvg = fs.readFileSync(qrPath, 'utf8');
   assert.ok(qrSvg.includes('<svg') && qrSvg.includes('</svg>'), 'QR file must be valid SVG');
   assert.ok(qrSize > 200 && qrSize < 15360, `Unexpected QR SVG byte size: ${qrSize}`);
+  const expectedQrSvg = await QRCode.toString(RECEIVING_WALLET, {
+    type: 'svg',
+    width: 200,
+    margin: 2,
+    color: { dark: '#0f172a', light: '#ffffff' },
+  });
+  assert.equal(qrSvg, expectedQrSvg, 'Static QR SVG must encode the exact active Binance BSC deposit address');
 
   console.log('PASS: All 12 USDT (BEP20) verifier & live BNB Smart Chain RPC smoke tests succeeded.');
 }

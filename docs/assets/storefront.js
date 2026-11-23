@@ -16,13 +16,13 @@ const TIER_MAP = {
     label: 'Website Diagnostic Audit',
     price: '$20.86 USD',
     usdt: '20.86',
-    sla: 'One-time payment via USDT (BEP20), 48 hours, up to 5 templates',
+    sla: 'One-time payment via USDT (BSC — BEP20), 48 hours, up to 5 templates',
   },
   'audit-fix': {
     label: 'Website Audit + Fix',
     price: '$48.86 USD',
     usdt: '48.86',
-    sla: 'One-time payment via USDT (BEP20), 3–5 business days, up to 5 templates + code fixes & verification re-audit',
+    sla: 'One-time payment via USDT (BSC — BEP20), 3–5 business days, up to 5 templates + code fixes & verification re-audit',
   },
 };
 
@@ -141,7 +141,7 @@ function updateBrief() {
     `- Website URL: ${url}`,
     `- Platform: ${platform}`,
     `- Service: ${tier.label} (${tier.price})`,
-    `- Payment Method: ${tier.usdt ? 'USDT (BEP20 on BNB Smart Chain ONLY)' : 'Free ($0)'}`,
+    `- Payment Method: ${tier.usdt ? 'USDT on BSC — BNB Smart Chain (BEP20) ONLY' : 'Free ($0)'}`,
     `- Terms & SLA: ${tier.sla}`,
     `- Focus Areas: ${focuses.length ? focuses.join('; ') : 'General diagnostic'}`,
     `- Notes: ${notes}`,
@@ -149,14 +149,14 @@ function updateBrief() {
 
   if (verifiedPayment && verifiedPayment.verified && verifiedPayment.paymentState === PAYMENT_STATES.CONFIRMED) {
     lines.push(
-      `- Verified Payment [${verifiedPayment.paymentState}]: ${verifiedPayment.receivedUsdt} USDT (BEP20) | Block #${verifiedPayment.blockNumber} (${verifiedPayment.confirmations} confirmations) | Tx: ${verifiedPayment.txHash} | BscScan: ${verifiedPayment.bscscanUrl}`
+      `- Verified Payment [${verifiedPayment.paymentState}]: ${verifiedPayment.receivedUsdt} USDT (BSC BEP20) | Block #${verifiedPayment.blockNumber} (${verifiedPayment.confirmations} confirmations) | Tx: ${verifiedPayment.txHash} | BscScan: ${verifiedPayment.bscscanUrl}`
     );
   } else if (tier.usdt) {
     const rawPendingHash = normalizeTxHash(txHashInput.value || '');
     if (rawPendingHash) {
-      lines.push(`- Payment Status: Pending Independent Verification (Submitted Tx: ${rawPendingHash})`);
+      lines.push(`- Payment Status: Pending Independent Verification & Binance Deposit Match (Submitted Tx: ${rawPendingHash})`);
     } else {
-      lines.push(`- Payment Status: Pending (${tier.usdt} USDT BEP20 due to ${RECEIVING_WALLET})`);
+      lines.push(`- Payment Status: Pending (${tier.usdt} USDT via BSC BEP20 to ${RECEIVING_WALLET})`);
     }
   }
 
@@ -216,7 +216,7 @@ copyWalletBtn.addEventListener('click', () => {
     RECEIVING_WALLET,
     () => {
       copyWalletBtn.textContent = 'Address Copied!';
-      copyWalletStatus.textContent = 'USDT (BEP20) wallet address copied.';
+      copyWalletStatus.textContent = 'USDT (BSC — BEP20) Binance deposit address copied.';
       if (walletResetTimer) clearTimeout(walletResetTimer);
       walletResetTimer = setTimeout(() => {
         copyWalletBtn.textContent = 'Copy Wallet Address';

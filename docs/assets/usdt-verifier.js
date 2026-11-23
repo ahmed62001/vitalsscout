@@ -3,7 +3,7 @@ export const BSC_CHAIN_ID = 56;
 export const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
 export const USDT_DECIMALS = 18;
 export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-export const RECEIVING_WALLET = '0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9';
+export const RECEIVING_WALLET = '0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2';
 export const MIN_CONFIRMATIONS = 5;
 export const DEFAULT_MAX_TX_AGE_SECONDS = 86400; // 24 hours
 
@@ -538,7 +538,8 @@ export async function verifyUsdtBep20Payment({
     txHash: normalizedHash,
     serviceKey: service.key,
     serviceName: service.name,
-    network: 'BNB Smart Chain (BEP20)',
+    network: 'BSC — BNB Smart Chain (BEP20)',
+    networkDisplayName: 'BSC',
     chainId: BSC_CHAIN_ID,
     contract: USDT_BEP20_CONTRACT,
     recipient: RECEIVING_WALLET,

@@ -267,24 +267,25 @@
           </div>
 
           <section class="usdt-panel" id="usdt-checkout-panel" aria-labelledby="usdt-checkout-heading">
-            <h3 id="usdt-checkout-heading">USDT (BEP20) Checkout — Only Accepted Payment Method</h3>
+            <h3 id="usdt-checkout-heading">USDT Checkout &mdash; BSC / BNB Smart Chain (BEP20) Only</h3>
             <p id="usdt-free-note" hidden>Free 1-Page Snapshot requires no payment — copy your brief and submit it via LinkedIn, GitHub Issue, or GitHub Discussions below.</p>
             <div id="usdt-paid-details">
               <div class="network-warning" role="note">
-                Warning: Send ONLY <strong>USDT on BNB Smart Chain (BEP20)</strong> (Chain ID 56). Do NOT send on Ethereum (ERC20), TRON (TRC20), Polygon, Solana, or any other network — wrong-network transfers cannot be verified and may be permanently lost.
+                Warning: Send ONLY <strong>USDT</strong> on <strong>BSC &mdash; BNB Smart Chain (BEP20)</strong> (Chain ID 56). Do NOT send on Ethereum (ERC20), TRON (TRC20), Polygon, Solana, or send any token other than USDT &mdash; wrong-network or wrong-asset deposits cannot be credited and may be permanently lost.
               </div>
               <div class="usdt-grid">
                 <div class="qr-box">
-                  <img src="./assets/usdt-bep20-qr.svg" alt="QR code for VitalsScout USDT BEP20 receiving wallet 0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9" width="200" height="200" />
+                  <img src="./assets/usdt-bep20-qr.svg" alt="QR code for VitalsScout USDT BSC BEP20 Binance deposit address 0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2" width="200" height="200" />
                 </div>
                 <ul class="usdt-meta">
-                  <li><strong>Only Accepted Method:</strong> USDT (BEP20 &mdash; Tether USD)</li>
-                  <li><strong>Required Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
-                  <li><strong>Exact One-Time Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong></li>
-                  <li><strong>Official USDT BEP20 Contract:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener noreferrer"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
+                  <li><strong>Payment Asset:</strong> USDT (Tether USD &mdash; BEP20)</li>
+                  <li><strong>Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
+                  <li><strong>Network Display Name:</strong> BSC</li>
+                  <li><strong>Exact One-Time Net Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong> (if withdrawing from an exchange, ensure net received &ge; due amount after sender fees)</li>
+                  <li><strong>Official USDT (BEP20) Contract on BSC:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener noreferrer"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
                   <li>
-                    <strong>Receiving Wallet Address:</strong><br />
-                    <code id="usdt-wallet-address">0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code>
+                    <strong>Binance BSC Deposit Address:</strong><br />
+                    <code id="usdt-wallet-address">0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2</code>
                     <div class="wallet-actions">
                       <button type="button" class="btn btn-secondary-light" id="copy-wallet-btn">Copy Wallet Address</button>
                       <span id="copy-wallet-status" class="status-note" aria-live="polite"></span>
@@ -294,13 +295,13 @@
               </div>
 
               <div>
-                <label class="field-label" for="usdt-tx-hash">After sending, paste your BNB Smart Chain Transaction Hash (0x...)</label>
+                <label class="field-label" for="usdt-tx-hash">After sending on BSC, paste your Transaction Hash (0x...) to match your order</label>
                 <div class="verify-row">
                   <input id="usdt-tx-hash" type="text" placeholder="0x..." maxlength="66" autocomplete="off" spellcheck="false" />
                   <button type="button" class="btn btn-primary" id="verify-usdt-btn">Verify Payment on BNB Smart Chain</button>
                 </div>
                 <div id="usdt-verify-status" class="verify-box is-pending" aria-live="polite">
-                  <strong>Payment State: Pending &mdash;</strong> Waiting for on-chain verification. Independent RPC quorum checks BNB Smart Chain (Chain ID 56) for &ge; 5 confirmations on the official USDT contract (payment states: <em>Pending</em>, <em>Confirmed</em>, <em>Failed</em>, or <em>Expired</em>). Duplicate transactions are rejected, and screenshots/unverified TXIDs are never accepted as proof.
+                  <strong>Payment State: Pending &mdash;</strong> Waiting for on-chain verification. Independent BSC RPC quorum checks Chain ID 56 (&ge; 5 confirmations on official USDT contract) and your exact TxID is matched in Binance Deposit History before fulfillment begins (payment states: <em>Pending</em>, <em>Confirmed</em>, <em>Failed</em>, or <em>Expired</em>). Always attach your TxID; screenshots alone are never accepted.
                 </div>
               </div>
             </div>
@@ -335,7 +336,7 @@
             </details>
             <details>
               <summary>What payment method is accepted and how is it verified?</summary>
-              <p><strong>USDT (BEP20 on BNB Smart Chain, Chain ID 56)</strong> sent to <code>0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code> is the <strong>only</strong> payment method accepted. Every transaction hash is independently verified against the official USDT BEP20 contract (<code>0x55d398326f99059fF775485246999027B3197955</code>), destination address, exact token amount, 24-hour checkout window, and &ge; 5 confirmations across independent BSC RPC nodes. Duplicate transaction claims are blocked, and if automated RPCs are temporarily unreachable, the order remains <em>Pending</em> until manually verified on BscScan.</p>
+              <p><strong>USDT</strong> sent via <strong>BSC &mdash; BNB Smart Chain (BEP20, Chain ID 56)</strong> to Binance deposit address <code>0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2</code> is the <strong>only</strong> payment method accepted. Every transaction hash is independently verified against the official USDT BEP20 contract (<code>0x55d398326f99059fF775485246999027B3197955</code>), destination address, exact net amount received, 24-hour checkout window, and &ge; 5 confirmations across independent BSC RPC nodes, then matched by exact TxID in Binance Deposit History. Duplicate transaction claims are rejected, and if automated RPCs are temporarily unreachable, the order remains <em>Pending</em> until manually verified.</p>
             </details>
           </div>
           <div>

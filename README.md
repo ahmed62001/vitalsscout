@@ -56,9 +56,11 @@ npm run verify-usdt -- <txHash> --service audit-fix --record verified-txs.json -
 
 If you run a Shopify, WooCommerce, Webflow, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend fixes (**strictly one-time payment — zero subscriptions; payable exclusively via USDT on BNB Smart Chain BEP20**):
 
-- **Only Accepted Asset & Network:** `USDT (BEP20)` on **BNB Smart Chain** (`Chain ID 56`)
+- **Payment Asset:** `USDT`
+- **Network:** `BNB Smart Chain (BEP20)` (`Chain ID 56`)
+- **Network Display Name:** `BSC`
 - **Official USDT BEP20 Token Contract:** `0x55d398326f99059fF775485246999027B3197955` (`18` decimals)
-- **Receiving Wallet Address:** `0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9`
+- **Binance BSC Deposit Address:** `0x3214fbd3d68c2ab7d6bc32963ed011cc541ee6f2`
 - **Free 1-Page Diagnostic Snapshot ($0):** [Open an Audit Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) or visit the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
 - **Website Diagnostic Audit ($20.86 USD / 20.86 USDT one-time, 48h):** Performance analysis, Core Web Vitals assessment, technical SEO inspection, WCAG 2.2 AA checks, and actionable recommendations across up to 5 templates
 - **Website Audit + Fix ($48.86 USD / 48.86 USDT one-time, 3–5 business days):** Complete audit plus actual code-level fixes within agreed scope, before-and-after comparisons, and verification through a new re-audit

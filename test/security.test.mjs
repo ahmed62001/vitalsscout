@@ -356,10 +356,12 @@ async function runSecurityTests() {
     'cli/verify-usdt-payment.mjs',
   ];
   const forbiddenPaymentRe = /(payoneer|nsave|elevate pay|paypal|stripe|wise|paddle|polar\.sh|fiverr|bank transfer|credit card|debit card|\bvisa\b|\bmastercard\b|\bach\b|\bsepa\b|gumroad|payhip|lemon squeezy|paymob|fawry|instapay|escrow|invoice)/i;
+  const obsoleteWallet = '0x78b86576' + '0a7154a8eec758ac1b9d4a9661bb8de9';
   for (const rel of textTargets) {
     const content = fs.readFileSync(path.join(root, rel), 'utf8');
     const match = content.match(forbiddenPaymentRe);
     assert.equal(match, null, `Forbidden non-USDT payment reference "${match?.[0]}" found in ${rel}`);
+    assert.ok(!content.toLowerCase().includes(obsoleteWallet), `Obsolete wallet address still present in ${rel}`);
   }
 
   const storefrontJs = fs.readFileSync(path.join(root, 'docs/assets/storefront.js'), 'utf8');

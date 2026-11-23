@@ -3,18 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none';" />
+  <meta name="referrer" content="no-referrer" />
   <title>Service Scope, Refund Policy &amp; Legal Disclaimer — VitalsScout</title>
-  <meta name="description" content="VitalsScout one-time service scope ($20.86 Website Diagnostic Audit and $48.86 Website Audit + Fix), timelines, refund policy, and legal notice." />
+  <meta name="description" content="VitalsScout one-time service scope ($20.86 Website Diagnostic Audit and $48.86 Website Audit + Fix), USDT BEP20 payment policy, refund policy, and legal notice." />
   <link rel="canonical" href="https://ahmed62001.github.io/vitalsscout/terms.html" />
-  <style>
-    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f172a; background: #f8fafc; line-height: 1.65; }
-    .wrap { max-width: 820px; margin: 0 auto; padding: 36px 20px 64px; }
-    .card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 28px; }
-    h1 { margin-top: 0; font-size: 28px; }
-    h2 { margin-top: 28px; font-size: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
-    a { color: #065f46; font-weight: 600; }
-    .nav-back { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 16px; }
-  </style>
+  <link rel="stylesheet" href="./assets/legal.css" />
 </head>
 <body>
   <main class="wrap">
@@ -27,8 +21,8 @@
       <h2>1. Scope &amp; Deliverables</h2>
       <ul>
         <li><strong>Free 1-Page Diagnostic Snapshot ($0):</strong> Single-URL automated mobile Lighthouse + axe-core WCAG 2.2 AA + technical SEO summary.</li>
-        <li><strong>Website Diagnostic Audit ($20.86 USD one-time, 48-hour SLA):</strong> Performance analysis, Core Web Vitals assessment, technical SEO &amp; HTTP security inspection, and WCAG 2.2 AA accessibility checks (<code>axe-core</code> + manual keyboard review) across up to 5 unique templates, delivered with detailed findings, actionable recommendations, and 1 verification re-scan within 7 days.</li>
-        <li><strong>Website Audit + Fix ($48.86 USD one-time, 3–5 business days SLA):</strong> Everything included in Website Diagnostic Audit plus actual code-level frontend fixes within the agreed 5-template scope (Git PR or theme patch, up to 2 revision rounds), before-and-after comparisons, and verification through a complete new re-audit.</li>
+        <li><strong>Website Diagnostic Audit ($20.86 USD / 20.86 USDT one-time, 48-hour SLA):</strong> Performance analysis, Core Web Vitals assessment, technical SEO &amp; HTTP security inspection, and WCAG 2.2 AA accessibility checks (<code>axe-core</code> + manual keyboard review) across up to 5 unique templates, delivered with detailed findings, actionable recommendations, and 1 verification re-scan within 7 days.</li>
+        <li><strong>Website Audit + Fix ($48.86 USD / 48.86 USDT one-time, 3–5 business days SLA):</strong> Everything included in Website Diagnostic Audit plus actual code-level frontend fixes within the agreed 5-template scope (Git PR or theme patch, up to 2 revision rounds), before-and-after comparisons, and verification through a complete new re-audit.</li>
       </ul>
 
       <h2>2. Explicit Exclusions</h2>
@@ -37,11 +31,11 @@
       <h2>3. Payment &amp; Refund Policy</h2>
       <ul>
         <li><strong>Ordering &amp; Contact Routes:</strong> Submit a scope brief via LinkedIn direct message (<code>linkedin.com/in/ahmed-mohamed-347211166</code> — no GitHub account required) or via GitHub Issues / Discussions.</li>
-        <li><strong>Accepted Payment Rails:</strong> Direct one-time <strong>USDT (BEP20) on BNB Smart Chain</strong> (Chain ID 56, official token contract <code>0x55d398326f99059fF775485246999027B3197955</code>, receiving wallet <code>0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code>), official one-time <strong>Payoneer Request a Payment</strong> USD invoice (US ACH, Visa/Mastercard, or local bank transfer), or Fiverr checkout once linked.</li>
-        <li><strong>USDT (BEP20) Network &amp; Verification Policy:</strong> Buyers must send only USDT on BNB Smart Chain (BEP20). Transfers sent on unsupported networks (such as ERC20 or TRC20) or wrong token contracts cannot be verified. Transactions require at least 5 block confirmations and independent on-chain operator verification (plus duplicate-hash check) before fulfillment begins.</li>
-        <li><strong>Pre-Start Cancellation:</strong> 100% refundable if cancelled before audit work begins.</li>
-        <li><strong>Website Diagnostic Audit ($20.86):</strong> Non-refundable once the completed 5-template diagnostic deliverable is delivered, unless VitalsScout failed to audit the agreed templates or included unverified claims.</li>
-        <li><strong>Website Audit + Fix ($48.86):</strong> If VitalsScout cannot achieve verifiable improvements on agreed in-scope theme/frontend defects (with timely staging/repo access provided), the $28.00 remediation portion is refundable prior to final sign-off.</li>
+        <li><strong>Only Accepted Payment Method:</strong> One-time <strong>USDT (BEP20) on BNB Smart Chain</strong> (Chain ID 56, official token contract <code>0x55d398326f99059fF775485246999027B3197955</code>, receiving wallet <code>0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code>). No other payment methods, networks, or recurring billing options are accepted.</li>
+        <li><strong>USDT (BEP20) Network &amp; Independent Verification Policy:</strong> Buyers must send only USDT on BNB Smart Chain (BEP20). Transfers sent on unsupported networks (such as ERC20 or TRC20) or wrong token contracts cannot be verified. Payment state remains <em>Pending</em> until independently verified on-chain (contract, recipient, exact amount, checkout validity window, &ge; 5 confirmations, independent RPC quorum, and operator replay-registry check) to transition to <em>Confirmed</em> (or <em>Failed</em> / <em>Expired</em>). Duplicate transaction claims are rejected, and if automated RPC verification is unavailable, the operator completes manual verification directly via BNB Smart Chain explorers before work begins.</li>
+        <li><strong>Pre-Start Cancellation:</strong> 100% refundable in USDT (BEP20) if cancelled before audit work begins.</li>
+        <li><strong>Website Diagnostic Audit ($20.86 / 20.86 USDT):</strong> Non-refundable once the completed 5-template diagnostic deliverable is delivered, unless VitalsScout failed to audit the agreed templates or included unverified claims.</li>
+        <li><strong>Website Audit + Fix ($48.86 / 48.86 USDT):</strong> If VitalsScout cannot achieve verifiable improvements on agreed in-scope theme/frontend defects (with timely staging/repo access provided), the $28.00 remediation portion is refundable in USDT (BEP20) prior to final sign-off.</li>
       </ul>
 
       <h2>4. Accessibility &amp; Regulatory Disclaimer</h2>

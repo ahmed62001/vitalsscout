@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; connect-src https://bsc-dataseed.binance.org https://bsc-rpc.publicnode.com https://bsc-dataseed1.defibit.io https://bsc-dataseed1.ninicoin.io;" />
+  <meta name="referrer" content="no-referrer" />
   <title>VitalsScout — Web Performance, Technical SEO &amp; WCAG 2.2 AA Audits</title>
-  <meta name="description" content="One-time Core Web Vitals, Technical SEO, and WCAG 2.2 AA Website Diagnostic Audits ($20.86) and Audit + Code Fix Sprints ($48.86) for indie e-commerce stores and B2B SaaS." />
+  <meta name="description" content="One-time Core Web Vitals, Technical SEO, and WCAG 2.2 AA Website Diagnostic Audits ($20.86) and Audit + Code Fix Sprints ($48.86) paid strictly via USDT (BEP20)." />
   <link rel="canonical" href="https://ahmed62001.github.io/vitalsscout/" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="VitalsScout — Speed, SEO & WCAG 2.2 AA Audits + Code Fixes" />
-  <meta property="og:description" content="Open-source diagnostic CLI + one-time Website Diagnostic Audits ($20.86) and Website Audit + Fix Sprints ($48.86) for Shopify, WooCommerce, and B2B SaaS." />
+  <meta property="og:description" content="Open-source diagnostic CLI + one-time Website Diagnostic Audits (20.86 USDT) and Website Audit + Fix Sprints (48.86 USDT) on BNB Smart Chain (BEP20)." />
   <meta property="og:url" content="https://ahmed62001.github.io/vitalsscout/" />
   <meta property="og:image" content="https://ahmed62001.github.io/vitalsscout/assets/og-card.jpg" />
+  <link rel="stylesheet" href="./assets/storefront.css" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -38,360 +41,6 @@
     ]
   }
   </script>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --surface: #f8fafc;
-      --dark: #0b1220;
-      --dark-card: #131f35;
-      --ink: #0f172a;
-      --muted: #334155;
-      --border: #cbd5e1;
-      --emerald: #047857;
-      --emerald-hover: #065f46;
-      --emerald-soft: #ecfdf5;
-      --emerald-light: #34d399;
-      --warn-soft: #fef3c7;
-      --warn-ink: #92400e;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: var(--ink);
-      background: var(--bg);
-      line-height: 1.6;
-      font-size: 16px;
-    }
-    .skip-link {
-      position: absolute;
-      left: -9999px;
-      top: 8px;
-      background: #ffffff;
-      color: var(--dark);
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-weight: 700;
-      z-index: 100;
-    }
-    .skip-link:focus { left: 12px; outline: 3px solid var(--emerald); }
-    .container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-    header { background: var(--dark); color: #f8fafc; border-bottom: 1px solid #1e293b; }
-    .topbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 14px 0;
-    }
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      color: #ffffff;
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 20px;
-      min-height: 44px;
-    }
-    .brand-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--emerald-light);
-      display: inline-block;
-    }
-    nav ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    nav a {
-      display: inline-flex;
-      align-items: center;
-      min-height: 44px;
-      padding: 0 12px;
-      color: #e2e8f0;
-      text-decoration: none;
-      font-weight: 600;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    nav a:hover, nav a:focus-visible {
-      background: #1e293b;
-      color: #ffffff;
-      outline: 2px solid var(--emerald-light);
-      outline-offset: 2px;
-    }
-    .hero {
-      background: var(--dark);
-      color: #f8fafc;
-      padding: 48px 0 64px;
-    }
-    .hero-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 32px;
-      align-items: center;
-    }
-    .eyebrow {
-      display: inline-block;
-      background: #064e3b;
-      color: #a7f3d0;
-      border: 1px solid #047857;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    h1 {
-      margin: 0 0 16px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-    }
-    .hero p { color: #cbd5e1; margin: 0 0 24px; font-size: 17px; }
-    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 48px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 15px;
-      text-decoration: none;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-    .btn-primary { background: var(--emerald); color: #ffffff; }
-    .btn-primary:hover, .btn-primary:focus-visible { background: var(--emerald-hover); outline: 3px solid #a7f3d0; outline-offset: 2px; }
-    .btn-secondary-dark { background: #1e293b; color: #f8fafc; border-color: #475569; }
-    .btn-secondary-dark:hover, .btn-secondary-dark:focus-visible { background: #334155; outline: 3px solid var(--emerald-light); outline-offset: 2px; }
-    .btn-secondary-light { background: #ffffff; color: var(--ink); border-color: #64748b; }
-    .btn-secondary-light:hover, .btn-secondary-light:focus-visible { background: #f1f5f9; outline: 3px solid var(--emerald); outline-offset: 2px; }
-    .hero-card {
-      background: var(--dark-card);
-      border: 1px solid #334155;
-      border-radius: 14px;
-      padding: 16px;
-    }
-    .hero-img { width: 100%; height: auto; border-radius: 10px; display: block; }
-    .hero-caption { margin: 10px 0 0; font-size: 13px; color: #cbd5e1; }
-    section { padding: 56px 0; }
-    section.alt { background: var(--surface); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
-    h2 { margin: 0 0 10px; font-size: 28px; line-height: 1.25; }
-    .section-lead { margin: 0 0 28px; color: var(--muted); max-width: 740px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-    .card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .card.featured { border: 2px solid var(--emerald); box-shadow: 0 6px 24px rgba(4, 120, 87, 0.08); }
-    .card h3 { margin: 0 0 8px; font-size: 20px; }
-    .price-tag { font-size: 32px; font-weight: 800; color: var(--ink); margin: 6px 0 4px; }
-    .sla { font-size: 14px; font-weight: 600; color: var(--emerald-hover); margin: 0 0 14px; }
-    ul.clean { padding-left: 18px; margin: 0 0 20px; color: var(--muted); }
-    ul.clean li { margin-bottom: 8px; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-    .badge-good { background: var(--emerald-soft); color: var(--emerald-hover); }
-    .badge-warn { background: var(--warn-soft); color: var(--warn-ink); }
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: #ffffff; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f1f5f9; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
-    .demo-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-    form.builder {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
-    label.field-label, legend.field-label {
-      display: block;
-      font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 6px;
-      color: var(--ink);
-    }
-    input[type="url"], input[type="email"], select, textarea {
-      width: 100%;
-      min-height: 44px;
-      padding: 10px 12px;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: inherit;
-      color: var(--ink);
-      background: #ffffff;
-    }
-    fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; }
-    .checks { display: flex; flex-wrap: wrap; gap: 16px; }
-    .check-item { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 500; cursor: pointer; }
-    .check-item input { width: 20px; height: 20px; accent-color: var(--emerald); }
-    .estimate-box {
-      background: var(--emerald-soft);
-      border: 1px solid #6ee7b7;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 16px;
-      color: #064e3b;
-    }
-    pre.brief-preview {
-      background: #0f172a;
-      color: #f8fafc;
-      padding: 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      margin: 0 0 14px;
-    }
-    .status-note { min-height: 24px; font-size: 14px; font-weight: 600; color: var(--emerald-hover); margin-top: 8px; }
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 14px;
-      margin: 0 0 24px;
-      padding: 0;
-      list-style: none;
-    }
-    .step-card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .step-num {
-      display: inline-block;
-      background: var(--emerald-soft);
-      color: var(--emerald-hover);
-      font-size: 12px;
-      font-weight: 800;
-      padding: 2px 10px;
-      border-radius: 999px;
-      margin-bottom: 6px;
-    }
-    .step-card h3 { margin: 0 0 4px; font-size: 16px; }
-    .step-card p { margin: 0; font-size: 14px; color: var(--muted); }
-    .usdt-panel {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin: 18px 0;
-    }
-    .usdt-panel h3 { margin: 0 0 8px; font-size: 18px; }
-    .network-warning {
-      background: #fef3c7;
-      color: #78350f;
-      border: 1px solid #f59e0b;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-    .usdt-grid {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 20px;
-      align-items: start;
-      margin-bottom: 16px;
-    }
-    @media (max-width: 680px) {
-      .usdt-grid { grid-template-columns: 1fr; }
-    }
-    .qr-box {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      text-align: center;
-      width: 220px;
-    }
-    .qr-box img { display: block; width: 200px; height: 200px; }
-    .usdt-meta { margin: 0; padding: 0; list-style: none; font-size: 14px; }
-    .usdt-meta li { margin-bottom: 10px; word-break: break-word; }
-    .usdt-meta code {
-      display: inline-block;
-      background: #f1f5f9;
-      color: #0f172a;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 13px;
-      word-break: break-all;
-    }
-    .usdt-meta a { color: var(--emerald-hover); font-weight: 600; display: inline-flex; align-items: center; min-height: 28px; }
-    .wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
-    .verify-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
-    .verify-row input[type="text"] {
-      flex: 1 1 300px;
-      min-height: 48px;
-      padding: 10px 12px;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      color: var(--ink);
-      background: #ffffff;
-    }
-    .verify-box {
-      margin-top: 12px;
-      padding: 12px 14px;
-      border-radius: 8px;
-      font-size: 14px;
-      background: #f1f5f9;
-      color: #0f172a;
-      border: 1px solid var(--border);
-    }
-    .verify-box.is-verified { background: var(--emerald-soft); color: #064e3b; border-color: #34d399; font-weight: 600; }
-    .verify-box.is-error { background: #fee2e2; color: #7f1d1d; border-color: #f87171; font-weight: 600; }
-    .verify-box.is-pending { background: #fef3c7; color: #78350f; border-color: #f59e0b; font-weight: 600; }
-    .verify-box a { color: inherit; font-weight: 700; display: inline-flex; align-items: center; min-height: 28px; }
-    details {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 12px;
-    }
-    summary { font-weight: 700; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
-    footer {
-      background: var(--dark);
-      color: #cbd5e1;
-      padding: 36px 0;
-      font-size: 14px;
-    }
-    footer a {
-      color: #6ee7b7;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      min-height: 44px;
-      margin-right: 16px;
-    }
-    .disclaimer {
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid #334155;
-      color: #cbd5e1;
-      font-size: 13px;
-    }
-  </style>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -502,16 +151,16 @@
 
     <section id="pricing">
       <div class="container">
-        <h2>Simple One-Time Service Pricing (USD)</h2>
+        <h2>Simple One-Time Service Pricing (USDT BEP20 Only)</h2>
         <p class="section-lead">
-          Two transparent, strictly one-time services scoped up to 5 unique templates (e.g., Home, Collection, Product/Pricing, Cart/Checkout Step 1, Contact/Blog). Zero subscriptions, zero retainers, zero hidden recurring charges.
+          Two transparent, strictly one-time services scoped up to 5 unique templates (e.g., Home, Collection, Product/Pricing, Cart/Checkout Step 1, Contact/Blog). Zero subscriptions, zero retainers, zero hidden recurring charges. <strong>USDT (BEP20 on BNB Smart Chain) is the only accepted payment method.</strong>
         </p>
 
         <div class="grid-2">
           <article class="card">
             <div>
               <h3>Website Diagnostic Audit</h3>
-              <p class="price-tag">$20.86 USD</p>
+              <p class="price-tag">$20.86 USD <span class="badge badge-good">20.86 USDT BEP20</span></p>
               <p class="sla">One-time payment &bull; Delivery: 48 hours</p>
               <ul class="clean">
                 <li>Performance analysis &amp; Core Web Vitals assessment</li>
@@ -528,7 +177,7 @@
             <div>
               <span class="badge badge-good">Complete Audit + Repair</span>
               <h3>Website Audit + Fix</h3>
-              <p class="price-tag">$48.86 USD</p>
+              <p class="price-tag">$48.86 USD <span class="badge badge-good">48.86 USDT BEP20</span></p>
               <p class="sla">One-time payment &bull; Delivery: 3–5 business days</p>
               <ul class="clean">
                 <li>Everything included in the Website Diagnostic Audit</li>
@@ -545,31 +194,31 @@
 
     <section id="request" class="alt">
       <div class="container">
-        <h2>Scope Estimator &amp; Audit Request Builder</h2>
+        <h2>Scope Estimator &amp; USDT (BEP20) Checkout</h2>
         <p class="section-lead">
-          Configure your store URL and one-time service below to generate a structured request brief. No GitHub account is required to order — copy your brief and message Ahmed directly on LinkedIn, or submit via GitHub Issues / Discussions.
+          Configure your store URL and one-time service below, pay using <strong>USDT on BNB Smart Chain (BEP20)</strong> (the sole accepted payment method), verify your transaction hash on-chain, and submit your generated brief via LinkedIn or GitHub Issues.
         </p>
 
         <ol class="steps-grid" aria-label="How Ordering and Payment Works">
           <li class="step-card">
             <span class="step-num">Step 1</span>
-            <h3>Build Your Brief</h3>
-            <p>Choose your one-time service, stack, and target URL below.</p>
+            <h3>Configure Scope</h3>
+            <p>Choose Free Snapshot, Diagnostic Audit ($20.86), or Audit + Fix ($48.86) and enter your URL.</p>
           </li>
           <li class="step-card">
             <span class="step-num">Step 2</span>
-            <h3>Send via LinkedIn or GitHub</h3>
-            <p>Copy your brief and DM Ahmed on LinkedIn (no GitHub login needed) or open a GitHub Issue.</p>
+            <h3>Pay with USDT (BEP20)</h3>
+            <p>Send exact USDT on <strong>BNB Smart Chain (BEP20)</strong> using the QR code or wallet address below.</p>
           </li>
           <li class="step-card">
             <span class="step-num">Step 3</span>
-            <h3>Pay with USDT or Payoneer</h3>
-            <p>Pay immediately via verified USDT (BEP20) below or request a one-time Payoneer USD invoice.</p>
+            <h3>Verify Transaction Hash</h3>
+            <p>Paste your <code>0x...</code> txHash to verify confirmations on-chain via independent BSC RPC quorum.</p>
           </li>
           <li class="step-card">
             <span class="step-num">Step 4</span>
-            <h3>Verified Delivery</h3>
-            <p>Get your 5-template audit in 48h ($20.86) or code fixes + Before/After proof in 3–5 days ($48.86).</p>
+            <h3>Submit &amp; Receive Delivery</h3>
+            <p>Send your brief on LinkedIn or GitHub Issue. Fulfillment starts only after Confirmed on-chain verification.</p>
           </li>
         </ol>
 
@@ -577,7 +226,7 @@
           <div class="field-grid">
             <div>
               <label class="field-label" for="site-url">Website / Store URL</label>
-              <input id="site-url" type="url" placeholder="https://yourstore.com" value="https://" required />
+              <input id="site-url" type="url" placeholder="https://yourstore.com" value="https://" maxlength="300" required />
             </div>
             <div>
               <label class="field-label" for="platform">Platform / Tech Stack</label>
@@ -590,11 +239,11 @@
               </select>
             </div>
             <div>
-              <label class="field-label" for="package-tier">Service</label>
+              <label class="field-label" for="package-tier">One-Time Service</label>
               <select id="package-tier">
                 <option value="free">Free 1-Page Snapshot ($0)</option>
-                <option value="audit">Website Diagnostic Audit ($20.86)</option>
-                <option value="audit-fix" selected>Website Audit + Fix ($48.86)</option>
+                <option value="audit">Website Diagnostic Audit (20.86 USDT)</option>
+                <option value="audit-fix" selected>Website Audit + Fix (48.86 USDT)</option>
               </select>
             </div>
           </div>
@@ -609,30 +258,30 @@
           </fieldset>
 
           <div>
-            <label class="field-label" for="notes">Optional Notes (5 key templates or preferred contact email for invoice)</label>
-            <textarea id="notes" rows="2" placeholder="Example: Home, Collection, Product, Cart, Contact. Send one-time Payoneer USD invoice to team@yourstore.com."></textarea>
+            <label class="field-label" for="notes">Optional Notes (5 key templates or preferred contact route — never post passwords or private keys)</label>
+            <textarea id="notes" rows="2" maxlength="1000" placeholder="Example: Home, Collection, Product, Cart, Contact. Reply on LinkedIn or GitHub Issue #..."></textarea>
           </div>
 
           <div class="estimate-box" id="estimate-summary" aria-live="polite">
-            <strong>Selected Service:</strong> Website Audit + Fix — <strong>$48.86 USD</strong> (One-time payment, 3–5 business days, up to 5 templates + code fixes &amp; re-audit).
+            <strong>Selected Service:</strong> Website Audit + Fix — <strong>$48.86 USD</strong> (One-time payment via USDT (BEP20), 3–5 business days, up to 5 templates + code fixes &amp; verification re-audit).
           </div>
 
           <section class="usdt-panel" id="usdt-checkout-panel" aria-labelledby="usdt-checkout-heading">
-            <h3 id="usdt-checkout-heading">Direct One-Time Checkout — Pay with USDT (BNB Smart Chain BEP20)</h3>
+            <h3 id="usdt-checkout-heading">USDT (BEP20) Checkout — Only Accepted Payment Method</h3>
             <p id="usdt-free-note" hidden>Free 1-Page Snapshot requires no payment — copy your brief and submit it via LinkedIn, GitHub Issue, or GitHub Discussions below.</p>
             <div id="usdt-paid-details">
               <div class="network-warning" role="note">
-                Send ONLY <strong>USDT on BNB Smart Chain (BEP20)</strong>. Transfers sent on ERC20, TRC20, or other networks cannot be verified and may be lost.
+                Warning: Send ONLY <strong>USDT on BNB Smart Chain (BEP20)</strong> (Chain ID 56). Do NOT send on Ethereum (ERC20), TRON (TRC20), Polygon, Solana, or any other network — wrong-network transfers cannot be verified and may be permanently lost.
               </div>
               <div class="usdt-grid">
                 <div class="qr-box">
                   <img src="./assets/usdt-bep20-qr.svg" alt="QR code for VitalsScout USDT BEP20 receiving wallet 0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9" width="200" height="200" />
                 </div>
                 <ul class="usdt-meta">
-                  <li><strong>Asset:</strong> USDT (BEP20 &mdash; Tether USD)</li>
-                  <li><strong>Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
-                  <li><strong>Exact Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong> (one-time)</li>
-                  <li><strong>Official USDT BEP20 Contract:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
+                  <li><strong>Only Accepted Method:</strong> USDT (BEP20 &mdash; Tether USD)</li>
+                  <li><strong>Required Network:</strong> BNB Smart Chain (BEP20, Chain ID 56)</li>
+                  <li><strong>Exact One-Time Amount Due:</strong> <strong id="usdt-amount-due">48.86 USDT</strong></li>
+                  <li><strong>Official USDT BEP20 Contract:</strong> <a href="https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955" target="_blank" rel="noopener noreferrer"><code>0x55d398326f99059fF775485246999027B3197955</code></a> (18 decimals)</li>
                   <li>
                     <strong>Receiving Wallet Address:</strong><br />
                     <code id="usdt-wallet-address">0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code>
@@ -647,11 +296,11 @@
               <div>
                 <label class="field-label" for="usdt-tx-hash">After sending, paste your BNB Smart Chain Transaction Hash (0x...)</label>
                 <div class="verify-row">
-                  <input id="usdt-tx-hash" type="text" placeholder="0x..." autocomplete="off" spellcheck="false" />
+                  <input id="usdt-tx-hash" type="text" placeholder="0x..." maxlength="66" autocomplete="off" spellcheck="false" />
                   <button type="button" class="btn btn-primary" id="verify-usdt-btn">Verify Payment on BNB Smart Chain</button>
                 </div>
-                <div id="usdt-verify-status" class="verify-box" aria-live="polite">
-                  No transaction verified yet. Verification queries live BNB Smart Chain Mainnet RPC nodes (Chain ID 56) for &ge; 5 confirmations on the official USDT BEP20 contract. Prefer traditional billing? Leave this blank and request a one-time Payoneer USD invoice when submitting your brief.
+                <div id="usdt-verify-status" class="verify-box is-pending" aria-live="polite">
+                  <strong>Payment State: Pending &mdash;</strong> Waiting for on-chain verification. Independent RPC quorum checks BNB Smart Chain (Chain ID 56) for &ge; 5 confirmations on the official USDT contract (payment states: <em>Pending</em>, <em>Confirmed</em>, <em>Failed</em>, or <em>Expired</em>). Duplicate transactions are rejected, and screenshots/unverified TXIDs are never accepted as proof.
                 </div>
               </div>
             </div>
@@ -662,9 +311,9 @@
 
           <div class="cta-row" id="cta-actions">
             <button class="btn btn-primary" type="button" id="copy-brief-btn">Copy Request Brief</button>
-            <a class="btn btn-secondary-light" id="linkedin-dm-link" href="https://www.linkedin.com/in/ahmed-mohamed-347211166/" target="_blank" rel="noopener">Message Ahmed on LinkedIn (No GitHub Needed)</a>
-            <a class="btn btn-secondary-light" id="github-issue-link" href="https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md" target="_blank" rel="noopener">Submit via GitHub Audit Issue</a>
-            <a class="btn btn-secondary-light" id="github-discussion-link" href="https://github.com/ahmed62001/vitalsscout/discussions" target="_blank" rel="noopener">Ask in GitHub Discussions</a>
+            <a class="btn btn-secondary-light" id="linkedin-dm-link" href="https://www.linkedin.com/in/ahmed-mohamed-347211166/" target="_blank" rel="noopener noreferrer">Message Ahmed on LinkedIn (No GitHub Needed)</a>
+            <a class="btn btn-secondary-light" id="github-issue-link" href="https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md" target="_blank" rel="noopener noreferrer">Submit via GitHub Audit Issue</a>
+            <a class="btn btn-secondary-light" id="github-discussion-link" href="https://github.com/ahmed62001/vitalsscout/discussions" target="_blank" rel="noopener noreferrer">Ask in GitHub Discussions</a>
           </div>
           <div class="status-note" id="copy-status" aria-live="polite"></div>
         </form>
@@ -682,11 +331,11 @@
             </details>
             <details>
               <summary>Are there any monthly fees, subscriptions, or retainers?</summary>
-              <p>No. VitalsScout operates exclusively as a one-time service business. You pay once per Website Diagnostic Audit ($20.86) or Website Audit + Fix ($48.86) with zero recurring billing or ongoing commitments.</p>
+              <p>No. VitalsScout operates exclusively as a one-time service business. You pay once per Website Diagnostic Audit ($20.86 / 20.86 USDT) or Website Audit + Fix ($48.86 / 48.86 USDT) with zero recurring billing or ongoing commitments.</p>
             </details>
             <details>
-              <summary>How do international payments work?</summary>
-              <p>Pay immediately via <strong>USDT (BNB Smart Chain — BEP20)</strong> directly on this page with automated on-chain transaction verification, or request an official one-time <strong>Payoneer Request a Payment</strong> USD invoice (US ACH bank debit, Visa/Mastercard, or local bank transfer) — plus Fiverr checkout once linked. Work starts once payment is verified.</p>
+              <summary>What payment method is accepted and how is it verified?</summary>
+              <p><strong>USDT (BEP20 on BNB Smart Chain, Chain ID 56)</strong> sent to <code>0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9</code> is the <strong>only</strong> payment method accepted. Every transaction hash is independently verified against the official USDT BEP20 contract (<code>0x55d398326f99059fF775485246999027B3197955</code>), destination address, exact token amount, 24-hour checkout window, and &ge; 5 confirmations across independent BSC RPC nodes. Duplicate transaction claims are blocked, and if automated RPCs are temporarily unreachable, the order remains <em>Pending</em> until manually verified on BscScan.</p>
             </details>
           </div>
           <div>
@@ -721,254 +370,6 @@
     </div>
   </footer>
 
-  <script type="module">
-    import { RECEIVING_WALLET, verifyUsdtBep20Payment } from './assets/usdt-verifier.js';
-
-    (function () {
-      var BUSINESS_EMAIL = '';
-      var FIVERR_URL = '';
-      var TIER_MAP = {
-        free: { label: 'Free 1-Page Snapshot', price: '$0 USD', usdt: null, sla: 'One-time free diagnostic, within 24 hours, 1 URL' },
-        audit: { label: 'Website Diagnostic Audit', price: '$20.86 USD', usdt: '20.86', sla: 'One-time payment, 48 hours, up to 5 templates' },
-        'audit-fix': { label: 'Website Audit + Fix', price: '$48.86 USD', usdt: '48.86', sla: 'One-time payment, 3–5 business days, up to 5 templates + code fixes & verification re-audit' }
-      };
-
-      var urlInput = document.getElementById('site-url');
-      var platformSelect = document.getElementById('platform');
-      var tierSelect = document.getElementById('package-tier');
-      var notesInput = document.getElementById('notes');
-      var summaryEl = document.getElementById('estimate-summary');
-      var outputEl = document.getElementById('brief-output');
-      var ghLink = document.getElementById('github-issue-link');
-      var copyBtn = document.getElementById('copy-brief-btn');
-      var copyStatus = document.getElementById('copy-status');
-      var ctaActions = document.getElementById('cta-actions');
-
-      var usdtFreeNote = document.getElementById('usdt-free-note');
-      var usdtPaidDetails = document.getElementById('usdt-paid-details');
-      var usdtAmountDue = document.getElementById('usdt-amount-due');
-      var copyWalletBtn = document.getElementById('copy-wallet-btn');
-      var copyWalletStatus = document.getElementById('copy-wallet-status');
-      var txHashInput = document.getElementById('usdt-tx-hash');
-      var verifyUsdtBtn = document.getElementById('verify-usdt-btn');
-      var verifyStatusEl = document.getElementById('usdt-verify-status');
-
-      var copyResetTimer = null;
-      var walletResetTimer = null;
-      var verifiedPayment = null;
-
-      if (BUSINESS_EMAIL && ctaActions) {
-        var mailLink = document.createElement('a');
-        mailLink.className = 'btn btn-primary';
-        mailLink.id = 'email-brief-link';
-        mailLink.href = 'mailto:' + BUSINESS_EMAIL;
-        mailLink.textContent = 'Email Brief Directly';
-        ctaActions.insertBefore(mailLink, ctaActions.firstChild);
-      }
-
-      if (FIVERR_URL && ctaActions) {
-        var fiverrLink = document.createElement('a');
-        fiverrLink.className = 'btn btn-secondary-light';
-        fiverrLink.id = 'fiverr-checkout-link';
-        fiverrLink.href = FIVERR_URL;
-        fiverrLink.target = '_blank';
-        fiverrLink.rel = 'noopener';
-        fiverrLink.textContent = 'Order via Fiverr Escrow';
-        ctaActions.appendChild(fiverrLink);
-      }
-
-      function setVerifyState(type, htmlContent) {
-        verifyStatusEl.className = 'verify-box' + (type ? ' ' + type : '');
-        verifyStatusEl.innerHTML = htmlContent;
-      }
-
-      function escapeHtml(s) {
-        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-
-      function syncUsdtPanel(tier) {
-        if (!tier.usdt) {
-          usdtFreeNote.hidden = false;
-          usdtPaidDetails.hidden = true;
-        } else {
-          usdtFreeNote.hidden = true;
-          usdtPaidDetails.hidden = false;
-          usdtAmountDue.textContent = tier.usdt + ' USDT';
-        }
-        if (verifiedPayment && verifiedPayment.serviceKey !== tierSelect.value) {
-          verifiedPayment = null;
-          setVerifyState('', 'Service changed — re-verify transaction hash for the selected amount before submitting.');
-        }
-      }
-
-      function updateBrief() {
-        var tier = TIER_MAP[tierSelect.value] || TIER_MAP['audit-fix'];
-        syncUsdtPanel(tier);
-
-        var url = (urlInput.value || '').trim() || 'https://yourstore.com';
-        var platform = platformSelect.value;
-        var focuses = Array.from(document.querySelectorAll('input[name="focus"]:checked')).map(function (c) { return c.value; });
-        var notes = (notesInput.value || '').trim() || 'None provided.';
-
-        summaryEl.innerHTML = '<strong>Selected Service:</strong> ' + tier.label + ' — <strong>' + tier.price + '</strong> (' + tier.sla + ').';
-
-        var lines = [
-          '## VitalsScout Audit Request',
-          '- Website URL: ' + url,
-          '- Platform: ' + platform,
-          '- Service: ' + tier.label + ' (' + tier.price + ')',
-          '- Terms & SLA: ' + tier.sla,
-          '- Focus Areas: ' + (focuses.length ? focuses.join('; ') : 'General diagnostic'),
-          '- Notes: ' + notes
-        ];
-
-        if (verifiedPayment && verifiedPayment.verified) {
-          lines.push(
-            '- Verified Payment: ' +
-              verifiedPayment.receivedUsdt +
-              ' USDT (BEP20) | Block #' +
-              verifiedPayment.blockNumber +
-              ' (' +
-              verifiedPayment.confirmations +
-              ' confirmations) | Tx: ' +
-              verifiedPayment.txHash +
-              ' | BscScan: ' +
-              verifiedPayment.bscscanUrl
-          );
-        }
-
-        var brief = lines.join('\n');
-        outputEl.textContent = brief;
-        var issueTitle = encodeURIComponent('[Audit Request] ' + url + ' (' + tier.price + ')');
-        var issueBody = encodeURIComponent(brief + '\n\n(Please remove or withhold any sensitive credentials before submitting.)');
-        ghLink.href = 'https://github.com/ahmed62001/vitalsscout/issues/new?title=' + issueTitle + '&body=' + issueBody;
-
-        var mailEl = document.getElementById('email-brief-link');
-        if (mailEl && BUSINESS_EMAIL) {
-          mailEl.href = 'mailto:' + BUSINESS_EMAIL + '?subject=' + issueTitle + '&body=' + encodeURIComponent(brief);
-        }
-      }
-
-      function copyWithFallback(text, onSuccess, onFail) {
-        var doFallback = function () {
-          var tmp = document.createElement('textarea');
-          tmp.value = text;
-          tmp.setAttribute('readonly', '');
-          tmp.style.position = 'absolute';
-          tmp.style.left = '-9999px';
-          document.body.appendChild(tmp);
-          tmp.select();
-          var ok = false;
-          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-          document.body.removeChild(tmp);
-          if (ok) onSuccess();
-          else onFail();
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(onSuccess, doFallback);
-        } else {
-          doFallback();
-        }
-      }
-
-      copyBtn.addEventListener('click', function () {
-        copyWithFallback(
-          outputEl.textContent,
-          function () {
-            copyBtn.textContent = 'Brief Copied!';
-            copyStatus.textContent = 'Request brief copied to clipboard — paste it in a LinkedIn message to Ahmed or a GitHub Issue.';
-            if (copyResetTimer) clearTimeout(copyResetTimer);
-            copyResetTimer = setTimeout(function () {
-              copyBtn.textContent = 'Copy Request Brief';
-            }, 2500);
-          },
-          function () {
-            copyStatus.textContent = 'Copy blocked by browser; select the brief box above manually.';
-          }
-        );
-      });
-
-      copyWalletBtn.addEventListener('click', function () {
-        copyWithFallback(
-          RECEIVING_WALLET,
-          function () {
-            copyWalletBtn.textContent = 'Address Copied!';
-            copyWalletStatus.textContent = 'USDT (BEP20) wallet address copied.';
-            if (walletResetTimer) clearTimeout(walletResetTimer);
-            walletResetTimer = setTimeout(function () {
-              copyWalletBtn.textContent = 'Copy Wallet Address';
-            }, 2500);
-          },
-          function () {
-            copyWalletStatus.textContent = 'Copy blocked; select the wallet address above manually.';
-          }
-        );
-      });
-
-      verifyUsdtBtn.addEventListener('click', async function () {
-        var serviceKey = tierSelect.value;
-        if (serviceKey !== 'audit' && serviceKey !== 'audit-fix') {
-          setVerifyState('is-error', 'Select Website Diagnostic Audit ($20.86) or Website Audit + Fix ($48.86) to verify payment.');
-          return;
-        }
-        var txHash = (txHashInput.value || '').trim();
-        verifiedPayment = null;
-        updateBrief();
-
-        verifyUsdtBtn.disabled = true;
-        verifyUsdtBtn.textContent = 'Verifying on BSC...';
-        setVerifyState('is-pending', 'Querying BNB Smart Chain Mainnet RPC nodes...');
-
-        try {
-          var result = await verifyUsdtBep20Payment({ txHash: txHash, serviceKey: serviceKey });
-          if (result.verified) {
-            verifiedPayment = result;
-            setVerifyState(
-              'is-verified',
-              'Verified on BNB Smart Chain! Received <strong>' +
-                escapeHtml(result.receivedUsdt) +
-                ' USDT</strong> at block #' +
-                escapeHtml(result.blockNumber) +
-                ' (' +
-                escapeHtml(result.confirmations) +
-                ' confirmations). <a href="' +
-                escapeHtml(result.bscscanUrl) +
-                '" target="_blank" rel="noopener">View on BscScan</a> — Your verified tx is now attached to the brief below.'
-            );
-            updateBrief();
-          } else {
-            var pendingStates = ['PENDING_MEMPOOL', 'PENDING_CONFIRMATIONS'];
-            var cls = pendingStates.indexOf(result.status) >= 0 ? 'is-pending' : 'is-error';
-            var linkHtml = result.bscscanUrl
-              ? ' <a href="' + escapeHtml(result.bscscanUrl) + '" target="_blank" rel="noopener">Check BscScan</a>'
-              : '';
-            setVerifyState(cls, escapeHtml(result.message) + linkHtml);
-          }
-        } catch (err) {
-          setVerifyState('is-error', 'Verification failed: ' + escapeHtml(err && err.message ? err.message : String(err)));
-        } finally {
-          verifyUsdtBtn.disabled = false;
-          verifyUsdtBtn.textContent = 'Verify Payment on BNB Smart Chain';
-        }
-      });
-
-      document.querySelectorAll('[data-select-tier]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          tierSelect.value = el.getAttribute('data-select-tier');
-          updateBrief();
-        });
-      });
-
-      [urlInput, platformSelect, tierSelect, notesInput].forEach(function (el) {
-        el.addEventListener('input', updateBrief);
-        el.addEventListener('change', updateBrief);
-      });
-      document.querySelectorAll('input[name="focus"]').forEach(function (el) {
-        el.addEventListener('change', updateBrief);
-      });
-
-      updateBrief();
-    })();
-  </script>
+  <script type="module" src="./assets/storefront.js"></script>
 </body>
 </html>

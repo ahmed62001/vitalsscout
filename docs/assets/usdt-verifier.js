@@ -5,6 +5,14 @@ export const USDT_DECIMALS = 18;
 export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 export const RECEIVING_WALLET = '0x78b865760a7154A8EeC758aC1B9d4a9661Bb8De9';
 export const MIN_CONFIRMATIONS = 5;
+export const DEFAULT_MAX_TX_AGE_SECONDS = 86400; // 24 hours
+
+export const PAYMENT_STATES = Object.freeze({
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  FAILED: 'Failed',
+  EXPIRED: 'Expired',
+});
 
 export const DEFAULT_BSC_RPCS = [
   'https://bsc-dataseed.binance.org/',
@@ -29,6 +37,8 @@ export const USDT_SERVICES = {
 };
 
 const BASE_UNIT_DIVISOR = 1000000000000000000n;
+const PADDED_ADDRESS_RE = /^0x0{24}[0-9a-fA-F]{40}$/;
+const HEX_UINT256_RE = /^0x[0-9a-fA-F]{1,64}$/;
 
 /**
  * Format 18-decimal base units (BigInt) into a human-readable decimal string.
@@ -71,7 +81,43 @@ export function isValidTxHash(rawHash) {
   return normalizeTxHash(rawHash) !== null;
 }
 
+/**
+ * Enforce HTTPS-only public RPC endpoints (rejects http://, embedded credentials, and loopback/private literals).
+ * @param {string} rawUrl
+ * @returns {boolean}
+ */
+export function isAllowedRpcUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(String(rawUrl || ''));
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:') return false;
+  if (parsed.username || parsed.password) return false;
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!host || host === 'localhost' || host.endsWith('.localhost')) return false;
+  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  if (host === '::1' || host === '::' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) {
+    return false;
+  }
+  return true;
+}
+
+function parseTimestampMs(val) {
+  if (val === undefined || val === null || val === '') return null;
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? val : NaN;
+  }
+  const parsed = Date.parse(String(val));
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
 async function rpcRequest(endpoint, method, params, fetchImpl, timeoutMs = 10000) {
+  if (!isAllowedRpcUrl(endpoint)) {
+    throw new Error(`Disallowed RPC endpoint: ${endpoint}`);
+  }
   const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = ac ? setTimeout(() => ac.abort(), timeoutMs) : null;
   try {
@@ -85,8 +131,14 @@ async function rpcRequest(endpoint, method, params, fetchImpl, timeoutMs = 10000
       throw new Error(`HTTP ${res.status}`);
     }
     const payload = await res.json();
+    if (!payload || typeof payload !== 'object' || payload.jsonrpc !== '2.0') {
+      throw new Error('Malformed JSON-RPC 2.0 response envelope');
+    }
     if (payload.error) {
       throw new Error(payload.error.message || 'JSON-RPC error');
+    }
+    if (!('result' in payload)) {
+      throw new Error('JSON-RPC response missing result field');
     }
     return payload.result;
   } finally {
@@ -94,33 +146,68 @@ async function rpcRequest(endpoint, method, params, fetchImpl, timeoutMs = 10000
   }
 }
 
-async function queryWithFailover(txHash, rpcEndpoints, fetchImpl) {
-  const errors = [];
-  for (const endpoint of rpcEndpoints) {
-    try {
-      const chainId = await rpcRequest(endpoint, 'eth_chainId', [], fetchImpl);
-      if (String(chainId).toLowerCase() !== BSC_CHAIN_ID_HEX) {
-        throw new Error(`Unexpected chainId ${chainId} (expected ${BSC_CHAIN_ID_HEX})`);
-      }
-      const [receipt, latestBlockHex] = await Promise.all([
-        rpcRequest(endpoint, 'eth_getTransactionReceipt', [txHash], fetchImpl),
-        rpcRequest(endpoint, 'eth_blockNumber', [], fetchImpl),
-      ]);
-      let tx = null;
-      if (receipt === null) {
-        tx = await rpcRequest(endpoint, 'eth_getTransactionByHash', [txHash], fetchImpl);
-      }
-      return { endpoint, receipt, latestBlockHex, tx };
-    } catch (err) {
-      errors.push(`${endpoint}: ${err?.message || String(err)}`);
+function extractUsdtTransfers(receipt) {
+  const targetContract = USDT_BEP20_CONTRACT.toLowerCase();
+  const targetWallet = RECEIVING_WALLET.toLowerCase();
+  const senders = [];
+  let receivedBaseUnits = 0n;
+  let matchingLogs = 0;
+
+  for (const log of receipt?.logs || []) {
+    if (!log || typeof log !== 'object' || log.removed === true) continue;
+    const addr = String(log.address || '').toLowerCase();
+    const topics = Array.isArray(log.topics) ? log.topics : [];
+    if (addr !== targetContract) continue;
+    if (topics.length !== 3) continue;
+    if (String(topics[0]).toLowerCase() !== TRANSFER_TOPIC) continue;
+    if (!PADDED_ADDRESS_RE.test(String(topics[1])) || !PADDED_ADDRESS_RE.test(String(topics[2]))) continue;
+
+    const toAddr = `0x${String(topics[2]).slice(26).toLowerCase()}`;
+    if (toAddr !== targetWallet) continue;
+
+    const dataHex = String(log.data || '').trim();
+    if (!HEX_UINT256_RE.test(dataHex)) continue;
+
+    const amount = BigInt(dataHex);
+    if (amount <= 0n) continue;
+
+    const fromAddr = `0x${String(topics[1]).slice(26).toLowerCase()}`;
+    if (!senders.includes(fromAddr)) {
+      senders.push(fromAddr);
     }
+    receivedBaseUnits += amount;
+    matchingLogs += 1;
   }
-  throw new Error(`All BNB Smart Chain RPC endpoints failed (${errors.join('; ')})`);
+
+  return { senders, receivedBaseUnits, matchingLogs };
+}
+
+async function querySingleRpc(endpoint, normalizedHash, fetchImpl) {
+  const chainId = await rpcRequest(endpoint, 'eth_chainId', [], fetchImpl);
+  if (String(chainId).toLowerCase() !== BSC_CHAIN_ID_HEX) {
+    throw new Error(`Unexpected chainId ${chainId} (expected ${BSC_CHAIN_ID_HEX})`);
+  }
+
+  const [receipt, latestBlockHex] = await Promise.all([
+    rpcRequest(endpoint, 'eth_getTransactionReceipt', [normalizedHash], fetchImpl),
+    rpcRequest(endpoint, 'eth_blockNumber', [], fetchImpl),
+  ]);
+
+  let tx = null;
+  let block = null;
+  if (receipt === null) {
+    tx = await rpcRequest(endpoint, 'eth_getTransactionByHash', [normalizedHash], fetchImpl);
+  } else if (receipt.blockNumber) {
+    block = await rpcRequest(endpoint, 'eth_getBlockByNumber', [receipt.blockNumber, false], fetchImpl);
+  }
+
+  return { endpoint, receipt, latestBlockHex, tx, block };
 }
 
 /**
  * Independently verify a USDT (BEP20) payment on BNB Smart Chain Mainnet.
- * Never returns verified=true unless all on-chain invariants pass.
+ * Returns explicit paymentState: 'Pending' | 'Confirmed' | 'Failed' | 'Expired'.
+ * Never marks verified=true unless all on-chain invariants and quorum (when >=2 RPCs) pass.
  *
  * @param {object} options
  * @param {string} options.txHash
@@ -128,6 +215,11 @@ async function queryWithFailover(txHash, rpcEndpoints, fetchImpl) {
  * @param {string[]} [options.rpcEndpoints]
  * @param {typeof fetch} [options.fetchImpl]
  * @param {number} [options.minConfirmations]
+ * @param {string|number|null} [options.orderCreatedAt]
+ * @param {string|number|null} [options.orderExpiresAt]
+ * @param {number|null} [options.maxAgeSeconds]
+ * @param {boolean} [options.requireQuorum]
+ * @param {number} [options.nowMs]
  */
 export async function verifyUsdtBep20Payment({
   txHash,
@@ -135,11 +227,17 @@ export async function verifyUsdtBep20Payment({
   rpcEndpoints = DEFAULT_BSC_RPCS,
   fetchImpl = globalThis.fetch,
   minConfirmations = MIN_CONFIRMATIONS,
+  orderCreatedAt = null,
+  orderExpiresAt = null,
+  maxAgeSeconds = DEFAULT_MAX_TX_AGE_SECONDS,
+  requireQuorum,
+  nowMs = Date.now(),
 }) {
   const service = USDT_SERVICES[serviceKey];
   if (!service) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_SERVICE',
       message: `Unknown service "${serviceKey}". Expected "audit" ($20.86) or "audit-fix" ($48.86).`,
     };
@@ -149,38 +247,77 @@ export async function verifyUsdtBep20Payment({
   if (!normalizedHash) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'INVALID_TX_HASH',
       message: 'Invalid transaction hash. Enter a 66-character 0x... BNB Smart Chain txHash.',
+    };
+  }
+
+  if (!Array.isArray(rpcEndpoints) || rpcEndpoints.length === 0 || rpcEndpoints.some((u) => !isAllowedRpcUrl(u))) {
+    return {
+      verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'INVALID_RPC_URL',
+      txHash: normalizedHash,
+      message: 'All configured BNB Smart Chain RPC endpoints must be public HTTPS URLs.',
+    };
+  }
+
+  const createdMs = parseTimestampMs(orderCreatedAt);
+  const expiresMs = parseTimestampMs(orderExpiresAt);
+  if (Number.isNaN(createdMs) || Number.isNaN(expiresMs)) {
+    return {
+      verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'INVALID_TIME_WINDOW',
+      txHash: normalizedHash,
+      message: 'Invalid orderCreatedAt or orderExpiresAt timestamp.',
     };
   }
 
   if (typeof fetchImpl !== 'function') {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.PENDING,
       status: 'FETCH_UNAVAILABLE',
-      message: 'HTTP fetch API is unavailable in this runtime.',
+      txHash: normalizedHash,
+      message: 'HTTP fetch API is unavailable in this runtime. Verify manually on BscScan before fulfilling.',
     };
   }
 
-  let rpcData;
-  try {
-    rpcData = await queryWithFailover(normalizedHash, rpcEndpoints, fetchImpl);
-  } catch (err) {
+  let primary = null;
+  let primaryIdx = -1;
+  const primaryErrors = [];
+  for (let i = 0; i < rpcEndpoints.length; i += 1) {
+    try {
+      primary = await querySingleRpc(rpcEndpoints[i], normalizedHash, fetchImpl);
+      primaryIdx = i;
+      break;
+    } catch (err) {
+      primaryErrors.push(`${rpcEndpoints[i]}: ${err?.message || String(err)}`);
+    }
+  }
+
+  const bscscanUrl = `https://bscscan.com/tx/${normalizedHash}`;
+
+  if (!primary) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.PENDING,
       status: 'RPC_UNAVAILABLE',
       txHash: normalizedHash,
-      message: err?.message || 'Unable to query BNB Smart Chain RPC nodes.',
+      bscscanUrl,
+      message: `Automated BNB Smart Chain RPC verification is temporarily unavailable (${primaryErrors.join('; ')}). Check manually on BscScan — do not mark paid until confirmed.`,
     };
   }
 
-  const { endpoint, receipt, latestBlockHex, tx } = rpcData;
-  const bscscanUrl = `https://bscscan.com/tx/${normalizedHash}`;
+  const { endpoint, receipt, latestBlockHex, tx, block } = primary;
 
   if (receipt === null) {
     if (tx && tx.blockNumber === null) {
       return {
         verified: false,
+        paymentState: PAYMENT_STATES.PENDING,
         status: 'PENDING_MEMPOOL',
         txHash: normalizedHash,
         bscscanUrl,
@@ -190,6 +327,7 @@ export async function verifyUsdtBep20Payment({
     }
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'TX_NOT_FOUND',
       txHash: normalizedHash,
       bscscanUrl,
@@ -198,9 +336,22 @@ export async function verifyUsdtBep20Payment({
     };
   }
 
+  if (receipt.transactionHash && String(receipt.transactionHash).toLowerCase() !== normalizedHash) {
+    return {
+      verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'RECEIPT_HASH_MISMATCH',
+      txHash: normalizedHash,
+      bscscanUrl,
+      rpcUsed: endpoint,
+      message: 'RPC node returned a mismatched transactionHash receipt. Verification rejected.',
+    };
+  }
+
   if (String(receipt.status).toLowerCase() !== '0x1') {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'TX_REVERTED',
       txHash: normalizedHash,
       bscscanUrl,
@@ -209,43 +360,11 @@ export async function verifyUsdtBep20Payment({
     };
   }
 
-  const targetContract = USDT_BEP20_CONTRACT.toLowerCase();
-  const targetWallet = RECEIVING_WALLET.toLowerCase();
-  const senders = [];
-  let receivedBaseUnits = 0n;
-  let matchingLogs = 0;
-
-  for (const log of receipt.logs || []) {
-    const addr = String(log.address || '').toLowerCase();
-    const topics = Array.isArray(log.topics) ? log.topics : [];
-    if (addr !== targetContract) continue;
-    if (topics.length < 3) continue;
-    if (String(topics[0]).toLowerCase() !== TRANSFER_TOPIC) continue;
-    if (String(topics[2]).length !== 66) continue;
-
-    const toAddr = `0x${String(topics[2]).slice(26).toLowerCase()}`;
-    if (toAddr !== targetWallet) continue;
-
-    const fromAddr = String(topics[1]).length === 66 ? `0x${String(topics[1]).slice(26).toLowerCase()}` : null;
-    if (fromAddr && !senders.includes(fromAddr)) {
-      senders.push(fromAddr);
-    }
-
-    let amount = 0n;
-    try {
-      amount = BigInt(log.data || '0x0');
-    } catch {
-      amount = 0n;
-    }
-    if (amount > 0n) {
-      receivedBaseUnits += amount;
-      matchingLogs += 1;
-    }
-  }
-
+  const { senders, receivedBaseUnits, matchingLogs } = extractUsdtTransfers(receipt);
   if (matchingLogs === 0) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'NO_MATCHING_USDT_TRANSFER',
       txHash: normalizedHash,
       bscscanUrl,
@@ -264,6 +383,7 @@ export async function verifyUsdtBep20Payment({
   if (receivedBaseUnits < service.expectedBaseUnits) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
       status: 'INSUFFICIENT_AMOUNT',
       txHash: normalizedHash,
       bscscanUrl,
@@ -277,14 +397,70 @@ export async function verifyUsdtBep20Payment({
     };
   }
 
+  const blockTsSec = block?.timestamp ? Number.parseInt(block.timestamp, 16) : null;
+  const blockTimestampMs = Number.isFinite(blockTsSec) ? blockTsSec * 1000 : null;
+  const blockTimestampIso = blockTimestampMs !== null ? new Date(blockTimestampMs).toISOString() : null;
+
+  if (blockTimestampMs === null && (createdMs !== null || expiresMs !== null || maxAgeSeconds !== null)) {
+    return {
+      verified: false,
+      paymentState: PAYMENT_STATES.FAILED,
+      status: 'BLOCK_TIMESTAMP_UNAVAILABLE',
+      txHash: normalizedHash,
+      bscscanUrl,
+      rpcUsed: endpoint,
+      blockNumber: txBlock,
+      message: 'Unable to validate on-chain block timestamp. Verify manually on BscScan.',
+    };
+  }
+
+  if (blockTimestampMs !== null) {
+    if (createdMs !== null && blockTimestampMs < createdMs - 60000) {
+      return {
+        verified: false,
+        paymentState: PAYMENT_STATES.FAILED,
+        status: 'TX_PRE_ORDER',
+        txHash: normalizedHash,
+        bscscanUrl,
+        rpcUsed: endpoint,
+        blockNumber: txBlock,
+        blockTimestamp: blockTimestampIso,
+        message: 'Transaction occurred before the order window started (possible old transaction replay).',
+      };
+    }
+
+    if (
+      (expiresMs !== null && blockTimestampMs > expiresMs) ||
+      (maxAgeSeconds !== null && nowMs - blockTimestampMs > maxAgeSeconds * 1000)
+    ) {
+      return {
+        verified: false,
+        paymentState: PAYMENT_STATES.EXPIRED,
+        status: 'PAYMENT_EXPIRED',
+        txHash: normalizedHash,
+        bscscanUrl,
+        rpcUsed: endpoint,
+        blockNumber: txBlock,
+        blockTimestamp: blockTimestampIso,
+        confirmations,
+        receivedBaseUnits: receivedBaseUnits.toString(),
+        receivedUsdt,
+        expectedUsdt: service.expectedUsdt,
+        message: 'Payment window expired (transaction timestamp is outside the valid checkout window). Submit your txHash with your brief for operator review.',
+      };
+    }
+  }
+
   if (confirmations < minConfirmations) {
     return {
       verified: false,
+      paymentState: PAYMENT_STATES.PENDING,
       status: 'PENDING_CONFIRMATIONS',
       txHash: normalizedHash,
       bscscanUrl,
       rpcUsed: endpoint,
       blockNumber: txBlock,
+      blockTimestamp: blockTimestampIso,
       confirmations,
       minConfirmations,
       receivedBaseUnits: receivedBaseUnits.toString(),
@@ -294,9 +470,71 @@ export async function verifyUsdtBep20Payment({
     };
   }
 
+  const useQuorum = requireQuorum !== undefined ? Boolean(requireQuorum) : rpcEndpoints.length >= 2;
+  const quorumRpcs = [endpoint];
+
+  if (useQuorum) {
+    const others = rpcEndpoints.filter((_, idx) => idx !== primaryIdx);
+    let secondaryData = null;
+    for (const secUrl of others) {
+      try {
+        secondaryData = await querySingleRpc(secUrl, normalizedHash, fetchImpl);
+        break;
+      } catch {
+        // try next independent RPC endpoint
+      }
+    }
+
+    if (!secondaryData) {
+      return {
+        verified: false,
+        paymentState: PAYMENT_STATES.PENDING,
+        status: 'RPC_QUORUM_UNAVAILABLE',
+        txHash: normalizedHash,
+        bscscanUrl,
+        rpcUsed: endpoint,
+        blockNumber: txBlock,
+        blockTimestamp: blockTimestampIso,
+        confirmations,
+        receivedBaseUnits: receivedBaseUnits.toString(),
+        receivedUsdt,
+        expectedUsdt: service.expectedUsdt,
+        message: 'Primary RPC saw the transfer, but a second independent BNB Smart Chain RPC node could not be reached to confirm quorum. Verify manually on BscScan.',
+      };
+    }
+
+    const secReceipt = secondaryData.receipt;
+    const secBlock = secReceipt?.blockNumber ? Number.parseInt(secReceipt.blockNumber, 16) : null;
+    const secTransfers = secReceipt ? extractUsdtTransfers(secReceipt) : { receivedBaseUnits: 0n, matchingLogs: 0 };
+    const secHashMismatch = secReceipt?.transactionHash && String(secReceipt.transactionHash).toLowerCase() !== normalizedHash;
+
+    if (
+      !secReceipt ||
+      secHashMismatch ||
+      String(secReceipt.status).toLowerCase() !== '0x1' ||
+      secBlock !== txBlock ||
+      secTransfers.matchingLogs === 0 ||
+      secTransfers.receivedBaseUnits < service.expectedBaseUnits
+    ) {
+      return {
+        verified: false,
+        paymentState: PAYMENT_STATES.FAILED,
+        status: 'RPC_CONSENSUS_MISMATCH',
+        txHash: normalizedHash,
+        bscscanUrl,
+        rpcUsed: endpoint,
+        secondaryRpc: secondaryData.endpoint,
+        message: 'Secondary BNB Smart Chain RPC node disagreed with primary verification result. Rejecting pending manual inspection.',
+      };
+    }
+
+    quorumRpcs.push(secondaryData.endpoint);
+  }
+
   return {
     verified: true,
-    status: 'VERIFIED',
+    paymentState: PAYMENT_STATES.CONFIRMED,
+    status: 'CONFIRMED',
     txHash: normalizedHash,
     serviceKey: service.key,
     serviceName: service.name,
@@ -306,13 +544,16 @@ export async function verifyUsdtBep20Payment({
     recipient: RECEIVING_WALLET,
     senders,
     blockNumber: txBlock,
+    blockTimestamp: blockTimestampIso,
     confirmations,
     receivedBaseUnits: receivedBaseUnits.toString(),
     receivedUsdt,
     expectedUsdt: service.expectedUsdt,
     bscscanUrl,
     rpcUsed: endpoint,
-    verifiedAt: new Date().toISOString(),
-    message: `Verified ${receivedUsdt} USDT (BEP20) on BNB Smart Chain block #${txBlock} (${confirmations} confirmations).`,
+    quorumVerified: useQuorum,
+    quorumRpcs,
+    verifiedAt: new Date(nowMs).toISOString(),
+    message: `Confirmed ${receivedUsdt} USDT (BEP20) on BNB Smart Chain block #${txBlock} (${confirmations} confirmations${useQuorum ? ', 2-RPC quorum' : ''}).`,
   };
 }

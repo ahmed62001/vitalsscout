@@ -1,0 +1,35 @@
+name: Security & Payment Verification CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies cleanly
+        run: npm ci
+
+      - name: Audit dependencies for High/Critical vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Run USDT (BEP20) payment verifier tests
+        run: node ./test/usdt-verifier.test.mjs
+
+      - name: Run security regression & USDT-only policy suite
+        run: node ./test/security.test.mjs

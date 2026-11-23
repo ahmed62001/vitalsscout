@@ -1,3 +1,5 @@
+import dns from 'node:dns/promises';
+import net from 'node:net';
 import { createRequire } from 'node:module';
 import lighthouse from 'lighthouse';
 import { launchHeadlessBrowser } from './browser-utils.mjs';
@@ -7,6 +9,17 @@ const axe = require('axe-core');
 
 const USER_AGENT = 'VitalsScout/1.0 (+https://github.com/ahmed62001/vitalsscout)';
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const MAX_HTML_BYTES = 2 * 1024 * 1024;
+const MAX_ROBOTS_BYTES = 256 * 1024;
+const MAX_SITEMAP_BYTES = 512 * 1024;
+const BLOCKED_HOSTNAMES = new Set([
+  'localhost',
+  'localhost.localdomain',
+  'ip6-localhost',
+  'ip6-loopback',
+  'metadata.google.internal',
+  'metadata',
+]);
 
 /**
  * Race a promise against a strict timeout so external sites never hang the CLI.
@@ -26,8 +39,87 @@ function withTimeout(promise, ms, label) {
   ]).finally(() => clearTimeout(timer));
 }
 
+function expandIpv6(raw) {
+  let ip = raw.toLowerCase();
+  if (ip.includes('.')) {
+    const lastColon = ip.lastIndexOf(':');
+    const v4 = ip.slice(lastColon + 1);
+    const parts = v4.split('.').map(Number);
+    if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+      return null;
+    }
+    const hi = ((parts[0] << 8) | parts[1]).toString(16);
+    const lo = ((parts[2] << 8) | parts[3]).toString(16);
+    ip = `${ip.slice(0, lastColon)}:${hi}:${lo}`;
+  }
+  const halves = ip.split('::');
+  if (halves.length > 2) return null;
+  const left = halves[0] ? halves[0].split(':').filter(Boolean) : [];
+  const right = halves[1] ? halves[1].split(':').filter(Boolean) : [];
+  if (halves.length === 1 && left.length !== 8) return null;
+  const missing = 8 - (left.length + right.length);
+  if (missing < 0) return null;
+  const full = [...left, ...Array(missing).fill('0'), ...right].map((g) => g.padStart(4, '0'));
+  return full.map((g) => Number.parseInt(g, 16));
+}
+
+function isBlockedIpv4Tuple(parts, allowLoopback) {
+  const [a, b, c] = parts;
+  if (allowLoopback && a === 127) return false;
+  if (a === 0 || a === 10 || a === 127) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64.0.0/10
+  if (a === 169 && b === 254) return true; // Link-local & cloud metadata 169.254.0.0/16
+  if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
+  if (a === 192 && b === 168) return true; // RFC1918
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return true;
+  if (a === 192 && b === 88 && c === 99) return true; // 6to4 anycast
+  if (a === 198 && (b === 18 || b === 19)) return true; // Benchmarking
+  if (a >= 224) return true; // Multicast & reserved
+  return false;
+}
+
 /**
- * Validate and normalize an audit target URL.
+ * Determine whether an IPv4 or IPv6 address belongs to loopback, link-local/metadata, or private ranges.
+ * @param {string} rawIp
+ * @param {{ allowLoopback?: boolean }} [options]
+ * @returns {boolean}
+ */
+export function isBlockedIp(rawIp, { allowLoopback = false } = {}) {
+  const ip = String(rawIp || '').replace(/^\[|\]$/g, '').split('%')[0].trim().toLowerCase();
+  if (!ip) return true;
+
+  if (net.isIPv4(ip)) {
+    return isBlockedIpv4Tuple(ip.split('.').map(Number), allowLoopback);
+  }
+
+  if (net.isIPv6(ip)) {
+    const words = expandIpv6(ip);
+    if (!words) return true;
+    const isAllZero = words.every((w) => w === 0);
+    if (isAllZero) return true; // :: unspecified
+    const isLoopbackV6 = words.slice(0, 7).every((w) => w === 0) && words[7] === 1;
+    if (isLoopbackV6) return !allowLoopback;
+    // IPv4-mapped (::ffff:0:0/96) or IPv4-compatible (::0:0/96) or NAT64 (64:ff9b::/96)
+    const isV4Mapped = words.slice(0, 5).every((w) => w === 0) && words[5] === 0xffff;
+    const isV4Compat = words.slice(0, 6).every((w) => w === 0);
+    const isNat64 = words[0] === 0x0064 && words[1] === 0xff9b && words[2] === 0 && words[3] === 0 && words[4] === 0 && words[5] === 0;
+    if (isV4Mapped || isV4Compat || isNat64) {
+      const tuple = [words[6] >> 8, words[6] & 0xff, words[7] >> 8, words[7] & 0xff];
+      return isBlockedIpv4Tuple(tuple, allowLoopback);
+    }
+    if ((words[0] & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+    if ((words[0] & 0xfe00) === 0xfc00) return true; // fc00::/7 ULA
+    if ((words[0] & 0xff00) === 0xff00) return true; // ff00::/8 multicast
+    if (words[0] === 0x0100 && words[1] === 0 && words[2] === 0 && words[3] === 0) return true; // Discard-Only
+    if (words[0] === 0x2001 && words[1] === 0x0db8) return true; // Documentation
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Validate and normalize an audit target URL syntax & protocol.
  * @param {string} rawUrl
  * @returns {URL}
  */
@@ -41,7 +133,105 @@ export function validateTargetUrl(rawUrl) {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error(`Unsupported protocol "${parsed.protocol}". Only http: and https: are supported.`);
   }
+  if (parsed.username || parsed.password) {
+    throw new Error('Embedded URL credentials (username/password) are not permitted.');
+  }
   return parsed;
+}
+
+/**
+ * Validate target URL against SSRF (blocks private, link-local, metadata, and non-public DNS resolutions).
+ * @param {string} rawUrl
+ * @param {{ allowLocalhost?: boolean }} [options]
+ * @returns {Promise<URL>}
+ */
+export async function assertSafeTargetUrl(rawUrl, { allowLocalhost = false } = {}) {
+  const parsed = validateTargetUrl(rawUrl);
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!host) {
+    throw new Error('Target URL missing hostname.');
+  }
+
+  const isLoopbackHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  if (!allowLocalhost) {
+    if (BLOCKED_HOSTNAMES.has(host) || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+      throw new Error(`Blocked non-public hostname: "${host}"`);
+    }
+  } else if (!isLoopbackHost && (BLOCKED_HOSTNAMES.has(host) || host.endsWith('.internal'))) {
+    throw new Error(`Blocked internal/metadata hostname: "${host}"`);
+  }
+
+  if (net.isIP(host)) {
+    if (isBlockedIp(host, { allowLoopback: allowLocalhost })) {
+      throw new Error(`Blocked non-public target IP address: ${host}`);
+    }
+    return parsed;
+  }
+
+  const records = await dns.lookup(host, { all: true, verbatim: true });
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error(`DNS lookup returned no addresses for "${host}"`);
+  }
+  for (const rec of records) {
+    if (isBlockedIp(rec.address, { allowLoopback: allowLocalhost })) {
+      throw new Error(`Target host "${host}" resolves to blocked non-public IP: ${rec.address}`);
+    }
+  }
+  return parsed;
+}
+
+async function readBoundedText(res, maxBytes) {
+  if (!res.body || typeof res.body.getReader !== 'function') {
+    const fallback = await res.text();
+    return fallback.slice(0, maxBytes);
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (total < maxBytes) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const buf = Buffer.from(value);
+      const remaining = maxBytes - total;
+      if (buf.length > remaining) {
+        chunks.push(buf.subarray(0, remaining));
+        total += remaining;
+        await reader.cancel().catch(() => {});
+        break;
+      }
+      chunks.push(buf);
+      total += buf.length;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function safeFetchWithRedirects(rawUrl, init, { allowLocalhost = false, maxRedirects = 5 } = {}) {
+  let currentUrl = rawUrl;
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const safeUrl = await assertSafeTargetUrl(currentUrl, { allowLocalhost });
+    const res = await fetch(safeUrl.href, {
+      ...init,
+      redirect: 'manual',
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) {
+        return { res, finalUrl: safeUrl.href };
+      }
+      if (hop === maxRedirects) {
+        throw new Error(`Exceeded maximum redirect hops (${maxRedirects})`);
+      }
+      await res.body?.cancel().catch(() => {});
+      currentUrl = new URL(loc, safeUrl.href).href;
+      continue;
+    }
+    return { res, finalUrl: safeUrl.href };
+  }
+  throw new Error('Unexpected redirect termination');
 }
 
 /**
@@ -62,8 +252,9 @@ export function slugifyUrl(rawUrl) {
 /**
  * Fetch target URL and crawlability files to inspect HTTP, security headers, and platform signals.
  * @param {URL} parsedUrl
+ * @param {{ allowLocalhost?: boolean }} [options]
  */
-async function inspectHttpAndCrawlability(parsedUrl) {
+async function inspectHttpAndCrawlability(parsedUrl, { allowLocalhost = false } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   const start = Date.now();
@@ -76,23 +267,27 @@ async function inspectHttpAndCrawlability(parsedUrl) {
   let fetchError = null;
 
   try {
-    const res = await fetch(parsedUrl.href, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml',
+    const fetched = await safeFetchWithRedirects(
+      parsedUrl.href,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/html,application/xhtml+xml',
+        },
       },
-    });
+      { allowLocalhost, maxRedirects: 5 }
+    );
+    const res = fetched.res;
     ttfbMs = Date.now() - start;
     statusCode = res.status;
-    finalUrl = res.url || parsedUrl.href;
+    finalUrl = fetched.finalUrl;
     for (const [k, v] of res.headers.entries()) {
       headersObj[k.toLowerCase()] = v;
     }
-    const text = await res.text();
-    htmlSnippet = text.slice(0, 60000);
+    const boundedHtml = await readBoundedText(res, MAX_HTML_BYTES);
+    htmlSnippet = boundedHtml.slice(0, 60000);
   } catch (err) {
     fetchError = err?.message || String(err);
   } finally {
@@ -134,26 +329,30 @@ async function inspectHttpAndCrawlability(parsedUrl) {
   }
 
   const origin = new URL(finalUrl).origin;
-  const probeTextEndpoint = async (path) => {
+  const probeTextEndpoint = async (subPath, maxBytes) => {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 8000);
     try {
-      const r = await fetch(`${origin}${path}`, {
-        method: 'GET',
-        redirect: 'follow',
-        signal: ac.signal,
-        headers: { 'User-Agent': USER_AGENT },
-      });
-      const body = await r.text();
+      const fetched = await safeFetchWithRedirects(
+        `${origin}${subPath}`,
+        {
+          method: 'GET',
+          signal: ac.signal,
+          headers: { 'User-Agent': USER_AGENT },
+        },
+        { allowLocalhost, maxRedirects: 5 }
+      );
+      const r = fetched.res;
+      const body = await readBoundedText(r, maxBytes);
       return {
-        url: `${origin}${path}`,
+        url: `${origin}${subPath}`,
         status: r.status,
         present: r.status >= 200 && r.status < 300 && body.trim().length > 0,
         byteLength: Buffer.byteLength(body, 'utf8'),
       };
     } catch (err) {
       return {
-        url: `${origin}${path}`,
+        url: `${origin}${subPath}`,
         status: null,
         present: false,
         error: err?.message || String(err),
@@ -164,8 +363,8 @@ async function inspectHttpAndCrawlability(parsedUrl) {
   };
 
   const [robotsTxt, sitemapXml] = await Promise.all([
-    probeTextEndpoint('/robots.txt'),
-    probeTextEndpoint('/sitemap.xml'),
+    probeTextEndpoint('/robots.txt', MAX_ROBOTS_BYTES),
+    probeTextEndpoint('/sitemap.xml', MAX_SITEMAP_BYTES),
   ]);
 
   return {
@@ -269,11 +468,28 @@ async function runLighthouseAudit(url, port) {
  * @param {import('puppeteer-core').Browser} browser
  * @param {string} url
  */
-async function runDomAndAxeScan(browser, url) {
+async function runDomAndAxeScan(browser, url, { allowLocalhost = false } = {}) {
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true });
-    await page.setRequestInterception(false);
+    if (!allowLocalhost) {
+      await page.setRequestInterception(true);
+      page.on('request', async (req) => {
+        const reqUrl = req.url();
+        if (reqUrl.startsWith('data:') || reqUrl.startsWith('blob:') || reqUrl === 'about:blank') {
+          req.continue().catch(() => {});
+          return;
+        }
+        try {
+          await assertSafeTargetUrl(reqUrl, { allowLocalhost: false });
+          req.continue().catch(() => {});
+        } catch {
+          req.abort('blockedbyclient').catch(() => {});
+        }
+      });
+    } else {
+      await page.setRequestInterception(false);
+    }
 
     try {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -611,14 +827,20 @@ function buildPrioritizedFixes(report) {
 /**
  * Run a complete, real diagnostic audit for a single URL.
  * @param {string} rawUrl
+ * @param {{ allowLocalhost?: boolean, displayUrl?: string|null }} [options]
  * @returns {Promise<object>}
  */
-export async function auditUrl(rawUrl) {
-  const parsedUrl = validateTargetUrl(rawUrl);
+export async function auditUrl(rawUrl, options = {}) {
+  const { allowLocalhost = false, displayUrl = null } = options;
+  const parsedUrl = await assertSafeTargetUrl(rawUrl, { allowLocalhost });
   const startedAt = new Date().toISOString();
 
-  const http = await inspectHttpAndCrawlability(parsedUrl);
+  const http = await inspectHttpAndCrawlability(parsedUrl, { allowLocalhost });
+  if (http.fetchError && /^(Blocked |Target host |Unsupported protocol|Embedded URL credentials|Exceeded maximum redirect)/.test(http.fetchError)) {
+    throw new Error(http.fetchError);
+  }
   const effectiveUrl = http.finalUrl || parsedUrl.href;
+  await assertSafeTargetUrl(effectiveUrl, { allowLocalhost });
 
   const { browser, port } = await launchHeadlessBrowser();
   try {
@@ -635,16 +857,21 @@ export async function auditUrl(rawUrl) {
         opportunities: [],
       };
     }
-    const domAndAxe = await runDomAndAxeScan(browser, effectiveUrl);
+    const domAndAxe = await runDomAndAxeScan(browser, effectiveUrl, { allowLocalhost });
 
     const { domHygiene, ...accessibility } = domAndAxe;
+
+    const reportedUrl = displayUrl || effectiveUrl;
+    if (displayUrl && http) {
+      http.finalUrl = displayUrl;
+    }
 
     const report = {
       tool: 'VitalsScout',
       version: '1.0.0',
       auditedAt: startedAt,
-      requestedUrl: parsedUrl.href,
-      finalUrl: effectiveUrl,
+      requestedUrl: displayUrl || parsedUrl.href,
+      finalUrl: reportedUrl,
       http,
       lighthouse: lighthouseData,
       accessibility,

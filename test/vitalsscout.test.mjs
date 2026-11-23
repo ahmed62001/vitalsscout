@@ -125,7 +125,7 @@ async function runTests() {
     console.log(`Fixture server running at ${baseUrl}`);
 
     console.log('1/2 Auditing intentionally defective /bad fixture...');
-    const badReport = await auditUrl(`${baseUrl}/bad`);
+    const badReport = await auditUrl(`${baseUrl}/bad`, { allowLocalhost: true });
     assert.ok(badReport.accessibility.violationCount >= 3, `Expected >= 3 WCAG violations on /bad, got ${badReport.accessibility.violationCount}`);
     assert.equal(badReport.domHygiene.htmlLang, '', 'Expected empty htmlLang on /bad');
     assert.equal(badReport.domHygiene.imagesMissingAlt, 1, 'Expected 1 image missing alt on /bad');
@@ -135,7 +135,7 @@ async function runTests() {
     assert.ok((badReport.lighthouse.scores.seo ?? 100) < 90, `Expected SEO < 90 on /bad, got ${badReport.lighthouse.scores.seo}`);
 
     console.log('2/2 Auditing remediated /good fixture...');
-    const goodReport = await auditUrl(`${baseUrl}/good`);
+    const goodReport = await auditUrl(`${baseUrl}/good`, { allowLocalhost: true });
     assert.equal(goodReport.accessibility.violationCount, 0, `Expected 0 WCAG violations on /good, got ${JSON.stringify(goodReport.accessibility.violations)}`);
     assert.equal(goodReport.domHygiene.htmlLang, 'en', 'Expected htmlLang=en on /good');
     assert.equal(goodReport.domHygiene.imagesMissingAlt, 0, 'Expected 0 missing alt on /good');

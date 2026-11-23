@@ -8,14 +8,26 @@ function printHelp() {
   console.log(`VitalsScout v1.0.0 — WCAG 2.2 AA, Core Web Vitals & Technical SEO Auditor
 
 Usage:
-  vitalsscout <url> [--out <dir>] [--slug <name>] [--quiet]
+  vitalsscout <url> [--out <dir>] [--slug <name>] [--allow-localhost] [--quiet]
 
 Options:
-  --out <dir>    Directory to write audit outputs (default: ./vitalsscout-reports)
-  --slug <name>  Base filename prefix (default: derived from URL)
-  --quiet        Suppress human summary output (prints output paths as JSON)
-  -h, --help     Show this help message
+  --out <dir>         Directory to write audit outputs (default: ./vitalsscout-reports)
+  --slug <name>       Base filename prefix (alphanumeric, hyphens, underscores only)
+  --allow-localhost   Explicitly permit auditing loopback targets (127.0.0.1 / ::1 / localhost)
+  --quiet             Suppress human summary output (prints output paths as JSON)
+  -h, --help          Show this help message
 `);
+}
+
+function sanitizeSlug(rawSlug, fallbackUrl) {
+  const cleaned = String(rawSlug || '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+  if (!cleaned || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(cleaned)) {
+    return slugifyUrl(fallbackUrl);
+  }
+  return cleaned;
 }
 
 function parseArgs(argv) {
@@ -26,7 +38,8 @@ function parseArgs(argv) {
 
   let url = null;
   let outDir = path.resolve(process.cwd(), 'vitalsscout-reports');
-  let slug = null;
+  let rawSlug = null;
+  let allowLocalhost = false;
   let quiet = false;
 
   for (let i = 0; i < args.length; i += 1) {
@@ -35,8 +48,10 @@ function parseArgs(argv) {
       outDir = path.resolve(process.cwd(), args[i + 1]);
       i += 1;
     } else if (token === '--slug' && args[i + 1]) {
-      slug = args[i + 1].replace(/[^a-zA-Z0-9_-]+/g, '-');
+      rawSlug = args[i + 1];
       i += 1;
+    } else if (token === '--allow-localhost') {
+      allowLocalhost = true;
     } else if (token === '--quiet') {
       quiet = true;
     } else if (!token.startsWith('-') && !url) {
@@ -50,7 +65,16 @@ function parseArgs(argv) {
     throw new Error('Missing target <url>.');
   }
 
-  return { help: false, url, outDir, slug: slug || slugifyUrl(url), quiet };
+  return { help: false, url, outDir, slug: rawSlug ? sanitizeSlug(rawSlug, url) : slugifyUrl(url), allowLocalhost, quiet };
+}
+
+function resolveContainedFile(dir, filename) {
+  const target = path.resolve(dir, filename);
+  const rel = path.relative(dir, target);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error(`Refusing output path outside target directory: ${filename}`);
+  }
+  return target;
 }
 
 async function main() {
@@ -72,12 +96,12 @@ async function main() {
     console.log(`[VitalsScout] Auditing ${opts.url} ...`);
   }
 
-  const report = await auditUrl(opts.url);
+  const report = await auditUrl(opts.url, { allowLocalhost: opts.allowLocalhost });
 
   fs.mkdirSync(opts.outDir, { recursive: true });
-  const jsonPath = path.join(opts.outDir, `${opts.slug}-audit.json`);
-  const htmlPath = path.join(opts.outDir, `${opts.slug}-report.html`);
-  const mdPath = path.join(opts.outDir, `${opts.slug}-snapshot.md`);
+  const jsonPath = resolveContainedFile(opts.outDir, `${opts.slug}-audit.json`);
+  const htmlPath = resolveContainedFile(opts.outDir, `${opts.slug}-report.html`);
+  const mdPath = resolveContainedFile(opts.outDir, `${opts.slug}-snapshot.md`);
 
   fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
   fs.writeFileSync(htmlPath, renderHtmlReport(report), 'utf8');
@@ -112,6 +136,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`[VitalsScout] Fatal error: ${err?.stack || err?.message || err}`);
+  const detail = process.env.VITALSSCOUT_DEBUG === '1' ? (err?.stack || err?.message || err) : (err?.message || 'Unexpected error');
+  console.error(`[VitalsScout] Error: ${detail}`);
   process.exitCode = 1;
 });

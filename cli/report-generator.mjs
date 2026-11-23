@@ -3,7 +3,12 @@ function esc(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeInt(val, fallback = 0) {
+  return typeof val === 'number' && Number.isFinite(val) ? Math.trunc(val) : fallback;
 }
 
 function fmtMs(val) {
@@ -120,13 +125,15 @@ export function renderHtmlReport(report) {
     : `<div class="clean-banner">0 WCAG 2.0 / 2.1 / 2.2 A &amp; AA violations detected by axe-core (${esc(a.passesCount || 0)} rule checks passed).</div>`;
 
   const boolBadge = (ok, yes = 'Present', no = 'Missing') =>
-    `<span class="pill pill-${ok ? 'good' : 'warn'}">${ok ? yes : no}</span>`;
+    `<span class="pill pill-${ok ? 'good' : 'warn'}">${ok ? esc(yes) : esc(no)}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none';" />
+  <meta name="referrer" content="no-referrer" />
   <title>VitalsScout Audit Report — ${esc(report.finalUrl)}</title>
   <style>
     :root {
@@ -251,15 +258,15 @@ export function renderHtmlReport(report) {
       <table>
         <thead><tr><th>Check</th><th>Observed Status</th></tr></thead>
         <tbody>
-          <tr><td>&lt;title&gt; Tag (${d.titleLength ?? 0} chars)</td><td>${esc(d.title || 'Missing')}</td></tr>
-          <tr><td>Meta Description (${d.metaDescriptionLength ?? 0} chars)</td><td>${esc(d.metaDescription || 'Missing')}</td></tr>
+          <tr><td>&lt;title&gt; Tag (${safeInt(d.titleLength)} chars)</td><td>${esc(d.title || 'Missing')}</td></tr>
+          <tr><td>Meta Description (${safeInt(d.metaDescriptionLength)} chars)</td><td>${esc(d.metaDescription || 'Missing')}</td></tr>
           <tr><td>Canonical URL</td><td>${esc(d.canonical || 'Missing')}</td></tr>
           <tr><td>&lt;html lang&gt; Attribute</td><td>${boolBadge(Boolean(d.htmlLang), d.htmlLang || 'Present', 'Missing')}</td></tr>
-          <tr><td>&lt;h1&gt; Count</td><td>${esc(d.h1Count ?? 0)}</td></tr>
-          <tr><td>Images Missing Alt / Dimensions</td><td>${esc(d.imagesMissingAlt ?? 0)} missing alt / ${esc(d.imagesMissingDimensions ?? 0)} missing width-height (of ${esc(d.totalImages ?? 0)})</td></tr>
-          <tr><td>Unlabelled Visible Form Fields</td><td>${esc(d.unlabelledInputs ?? 0)}</td></tr>
-          <tr><td>Small Interactive Targets (&lt;24x24px)</td><td>${esc(d.smallTapTargets ?? 0)}</td></tr>
-          <tr><td>JSON-LD Structured Data Blocks</td><td>${esc(d.jsonLdCount ?? 0)}</td></tr>
+          <tr><td>&lt;h1&gt; Count</td><td>${safeInt(d.h1Count)}</td></tr>
+          <tr><td>Images Missing Alt / Dimensions</td><td>${safeInt(d.imagesMissingAlt)} missing alt / ${safeInt(d.imagesMissingDimensions)} missing width-height (of ${safeInt(d.totalImages)})</td></tr>
+          <tr><td>Unlabelled Visible Form Fields</td><td>${safeInt(d.unlabelledInputs)}</td></tr>
+          <tr><td>Small Interactive Targets (&lt;24x24px)</td><td>${safeInt(d.smallTapTargets)}</td></tr>
+          <tr><td>JSON-LD Structured Data Blocks</td><td>${safeInt(d.jsonLdCount)}</td></tr>
           <tr><td>robots.txt / sitemap.xml</td><td>${boolBadge(crawl.robotsTxt?.present, 'robots.txt OK', 'robots.txt missing')} ${boolBadge(crawl.sitemapXml?.present, 'sitemap.xml OK', 'sitemap.xml missing')}</td></tr>
           <tr><td>HTTPS / HSTS / CSP / XCTO / Compression</td><td>
             ${boolBadge(hdr.https, 'HTTPS', 'No HTTPS')}

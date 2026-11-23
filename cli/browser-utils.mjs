@@ -31,13 +31,13 @@ export function findChromeExecutable() {
  */
 export async function launchHeadlessBrowser() {
   const executablePath = findChromeExecutable();
+  const sandboxDisabled = process.env.VITALSSCOUT_NO_SANDBOX === '1';
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
     args: [
       '--headless=new',
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
+      ...(sandboxDisabled ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
       '--disable-gpu',
       '--disable-dev-shm-usage',
       '--disable-background-networking',

@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "axe-core": "^4.10.2",
-    "lighthouse": "^12.6.0",
-    "puppeteer-core": "^24.4.0",
+    "lighthouse": "^13.6.0",
+    "puppeteer-core": "^25.18.1",
     "qrcode": "^1.5.4"
   }
 }

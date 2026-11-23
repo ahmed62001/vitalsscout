@@ -49,14 +49,13 @@ npm test
 
 ---
 
-## Need Hands-On Remediation?
+## Need a One-Time Audit or Code Repair?
 
-If you run a Shopify, WooCommerce, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend PR fixes:
+If you run a Shopify, WooCommerce, Webflow, or SaaS site and want manual keyboard/screen-reader testing plus hands-on frontend fixes (strictly one-time payment — zero subscriptions):
 
 - **Free 1-Page Diagnostic Snapshot ($0):** [Open an Audit Request Issue](https://github.com/ahmed62001/vitalsscout/issues/new?template=audit-request.md) or visit the [VitalsScout Storefront](https://ahmed62001.github.io/vitalsscout/)
-- **Tier 1 — Core 5-Template Audit ($149 USD, 48h)**
-- **Tier 2 — Audit + Code Fix Sprint ($349 USD, 3–5 business days)**
-- **Tier 3 — Monthly Vitals Guard ($99 USD/mo)**
+- **Website Diagnostic Audit ($20.86 USD one-time, 48h):** Performance analysis, Core Web Vitals assessment, technical SEO inspection, WCAG 2.2 AA checks, and actionable recommendations across up to 5 templates
+- **Website Audit + Fix ($48.86 USD one-time, 3–5 business days):** Complete audit plus actual code-level fixes within agreed scope, before-and-after comparisons, and verification through a new re-audit
 
 *Disclaimer: VitalsScout provides technical diagnostics and frontend engineering remediation aligned with WCAG 2.2 AA and Core Web Vitals. It is not a law firm and does not provide legal advice or formal ADA/EAA compliance guarantees.*
 

@@ -1,6 +1,6 @@
 ---
 name: Audit or Free 1-Page Snapshot Request
-about: Request a free 1-page diagnostic snapshot or a scoped Tier 1 / Tier 2 audit + fix sprint
+about: Request a free 1-page diagnostic snapshot or a one-time Website Diagnostic Audit ($20.86) / Website Audit + Fix ($48.86)
 title: "[Audit Request] <Store or Site URL>"
 labels: audit-request
 ---
@@ -8,7 +8,7 @@ labels: audit-request
 ## Store / Website Information
 - **Website URL:** https://
 - **Platform / Stack:** (Shopify / WooCommerce / Next.js / Webflow / Custom)
-- **Package Requested:** (Free 1-Page Snapshot $0 / Tier 1 Core Audit $149 / Tier 2 Audit + Code Fix Sprint $349 / Monthly Guard $99/mo)
+- **One-Time Service Requested:** (Free 1-Page Snapshot $0 / Website Diagnostic Audit $20.86 / Website Audit + Fix $48.86)
 
 ## Primary Goal
 - [ ] Improve mobile Core Web Vitals (LCP / CLS / TBT)
